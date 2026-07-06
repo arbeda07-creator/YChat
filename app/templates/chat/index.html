@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - YChat 2.0{% endblock %}
+
+{% block content %}
+  <section class="chat-layout">
+    <div class="chat-header">
+      <div>
+        <h1>Team Chat</h1>
+        <p>Messages are saved securely in SQLite.</p>
+      </div>
+    </div>
+
+    <div class="messages" aria-live="polite">
+      {% if messages %}
+        {% for message in messages %}
+          <article class="message {% if message.author == current_user %}message-own{% endif %}">
+            <div class="message-meta">
+              <strong>{{ message.author.username }}</strong>
+              <time datetime="{{ message.created_at.isoformat() }}">
+                {{ message.created_at.strftime("%Y-%m-%d %H:%M") }}
+              </time>
+            </div>
+            <p>{{ message.body }}</p>
+          </article>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">No messages yet. Start the room.</div>
+      {% endif %}
+    </div>
+
+    <form class="composer" method="post">
+      <label class="sr-only" for="body">Message</label>
+      <textarea id="body" name="body" rows="3" maxlength="2000" placeholder="Write a message..." required></textarea>
+      <button class="button button-primary" type="submit">Send</button>
+    </form>
+  </section>
+{% endblock %}
