@@ -20,6 +20,7 @@ def normalize_database_url(database_url):
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY")
+    MESSAGES_FILE = os.environ.get("MESSAGES_FILE", str(BASE_DIR / "messages.json"))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

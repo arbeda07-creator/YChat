@@ -6,33 +6,36 @@
   <section class="chat-layout">
     <div class="chat-header">
       <div>
+        <span class="eyebrow">YChat Version 2</span>
         <h1>Team Chat</h1>
-        <p>Messages are saved securely in SQLite.</p>
+        <p>Live messages, refreshed every two seconds.</p>
       </div>
+      <span class="connection-status" id="connection-status" role="status">
+        <span class="status-dot"></span>
+        Live
+      </span>
     </div>
 
-    <div class="messages" aria-live="polite">
-      {% if messages %}
-        {% for message in messages %}
-          <article class="message {% if message.author == current_user %}message-own{% endif %}">
-            <div class="message-meta">
-              <strong>{{ message.author.username }}</strong>
-              <time datetime="{{ message.created_at.isoformat() }}">
-                {{ message.created_at.strftime("%Y-%m-%d %H:%M") }}
-              </time>
-            </div>
-            <p>{{ message.body }}</p>
-          </article>
-        {% endfor %}
-      {% else %}
-        <div class="empty-state">No messages yet. Start the room.</div>
-      {% endif %}
+    <div
+      class="messages"
+      id="messages"
+      aria-live="polite"
+      data-current-user="{{ current_user.username }}"
+      data-messages-url="{{ url_for('chat.messages_api') }}"
+      data-send-url="{{ url_for('chat.send_api') }}"
+    >
+      <div class="empty-state">Loading messages…</div>
     </div>
 
-    <form class="composer" method="post">
+    <form class="composer" id="composer">
       <label class="sr-only" for="body">Message</label>
-      <textarea id="body" name="body" rows="3" maxlength="2000" placeholder="Write a message..." required></textarea>
-      <button class="button button-primary" type="submit">Send</button>
+      <textarea id="body" name="body" rows="2" maxlength="2000" placeholder="Write a message…" required></textarea>
+      <button class="button button-primary send-button" type="submit">Send</button>
+      <p class="composer-error" id="composer-error" role="alert"></p>
     </form>
   </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/chat.js') }}" defer></script>
 {% endblock %}

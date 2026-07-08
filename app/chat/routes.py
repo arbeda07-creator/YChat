@@ -1,32 +1,36 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required
 
-from app.extensions import db
-from app.models import Message
+from app.chat.storage import get_messages, save_message
 
 
 chat_bp = Blueprint("chat", __name__)
 
 
-@chat_bp.route("/", methods=["GET", "POST"])
+@chat_bp.route("/")
 @login_required
 def index():
-    if request.method == "POST":
-        body = request.form.get("body", "").strip()
+    return render_template("chat/index.html")
 
-        if not body:
-            flash("Message cannot be empty.", "error")
-        elif len(body) > 2000:
-            flash("Message is too long.", "error")
-        else:
-            message = Message(body=body, author=current_user)
-            db.session.add(message)
-            db.session.commit()
-            return redirect(url_for("chat.index"))
 
-    messages = (
-        Message.query.order_by(Message.created_at.asc(), Message.id.asc())
-        .limit(100)
-        .all()
-    )
-    return render_template("chat/index.html", messages=messages)
+@chat_bp.get("/api/messages")
+@login_required
+def messages_api():
+    response = jsonify({"messages": get_messages()})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@chat_bp.post("/api/send")
+@login_required
+def send_api():
+    payload = request.get_json(silent=True) or request.form
+    body = str(payload.get("message", "")).strip()
+
+    if not body:
+        return jsonify({"error": "Message cannot be empty."}), 400
+    if len(body) > 2000:
+        return jsonify({"error": "Message is too long."}), 400
+
+    message = save_message(current_user.username, body)
+    return jsonify({"message": message}), 201
