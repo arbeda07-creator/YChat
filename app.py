@@ -179,8 +179,59 @@ class YChatHandler(BaseHTTPRequestHandler):
         elif self.path == "/delete_all":
             save_messages([])
             self.redirect("/")
+    def application(environ, start_response):
+        path = environ.get("PATH_INFO", "/")
+        method = environ.get("REQUEST_METHOD", "GET")
 
-server = ThreadingHTTPServer(("127.0.0.1", 8000), YChatHandler)
-print("YChat is running...")
-print("Open this link: http://127.0.0.1:8000")
-server.serve_forever()
+        cookies = environ.get("HTTP_COOKIE", "")
+        username = ""
+        if "username=" in cookies:
+            username = cookies.split("username=")[-1].split(";")[0]
+
+        def response(html, status="200 OK", headers=None):
+            h = [("Content-Type", "text/html; charset=utf-8")]
+            if headers:
+                h += headers
+            start_response(status, h)
+            return [html.encode("utf-8")]
+
+        if path == "/logout":
+            return response("", "303 See Other", [
+                ("Location", "/"),
+                ("Set-Cookie", "username=; Max-Age=0")
+            ])
+
+        if method == "POST":
+            length = int(environ.get("CONTENT_LENGTH", 0) or 0)
+            data = environ["wsgi.input"].read(length).decode("utf-8")
+            form = parse_qs(data)
+
+            if path == "/login":
+                username = form.get("username", [""])[0]
+                password = form.get("password", [""])[0]
+                if password == PASSWORD:
+                    return response("", "303 See Other", [
+                        ("Location", "/"),
+                        ("Set-Cookie", f"username={username}")
+                    ])
+                return response(login_page() + "<h3 style='color:red'>Wrong password</h3>")
+
+            if not username:
+                return response("", "303 See Other", [("Location", "/")])
+
+            if path == "/send":
+                text = form.get("text", [""])[0]
+                messages = load_messages()
+                messages.append({
+                    "user": username,
+                    "time": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "text": text
+                })
+                save_messages(messages)
+                return response("", "303 See Other", [("Location", "/")])
+
+        if not username:
+            return response(login_page())
+
+        return response(page(username))
+application = page
