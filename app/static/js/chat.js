@@ -6,7 +6,7 @@ const errorElement = document.querySelector("#composer-error");
 const statusElement = document.querySelector("#connection-status");
 
 let refreshInProgress = false;
-let lastRenderedSignature = "";
+const seenMessageIds = new Set();
 
 function formatTime(isoTime) {
   const date = new Date(isoTime);
@@ -18,47 +18,53 @@ function formatTime(isoTime) {
   }).format(date);
 }
 
-function renderMessages(messages) {
-  const signature = JSON.stringify(messages);
-  if (signature === lastRenderedSignature) return;
-  lastRenderedSignature = signature;
-
-  const fragment = document.createDocumentFragment();
-
-  if (messages.length === 0) {
-    const emptyState = document.createElement("div");
-    emptyState.className = "empty-state";
-    emptyState.textContent = "No messages yet. Start the conversation.";
-    fragment.append(emptyState);
-  } else {
-    messages.forEach((item) => {
-      const article = document.createElement("article");
-      article.className = "message";
-      if (item.username === messagesElement.dataset.currentUser) {
-        article.classList.add("message-own");
-      }
-
-      const meta = document.createElement("div");
-      meta.className = "message-meta";
-
-      const username = document.createElement("strong");
-      username.textContent = item.username;
-
-      const time = document.createElement("time");
-      time.dateTime = item.time;
-      time.textContent = formatTime(item.time);
-
-      const message = document.createElement("p");
-      message.textContent = item.message;
-
-      meta.append(username, time);
-      article.append(meta, message);
-      fragment.append(article);
-    });
+function createMessageElement(item) {
+  const article = document.createElement("article");
+  article.className = "message";
+  article.dataset.messageId = item.id;
+  if (item.username === messagesElement.dataset.currentUser) {
+    article.classList.add("message-own");
   }
 
-  messagesElement.replaceChildren(fragment);
-  messagesElement.scrollTo({ top: messagesElement.scrollHeight, behavior: "smooth" });
+  const meta = document.createElement("div");
+  meta.className = "message-meta";
+
+  const username = document.createElement("strong");
+  username.textContent = item.username;
+
+  const time = document.createElement("time");
+  time.dateTime = item.time;
+  time.textContent = formatTime(item.time);
+
+  const message = document.createElement("p");
+  message.textContent = item.message;
+
+  meta.append(username, time);
+  article.append(meta, message);
+  return article;
+}
+
+function appendNewMessages(messages) {
+  const newMessages = messages.filter((item) => !seenMessageIds.has(String(item.id)));
+
+  if (newMessages.length === 0) {
+    if (messages.length === 0 && seenMessageIds.size === 0) {
+      messagesElement.querySelector(".empty-state").textContent =
+        "No messages yet. Start the conversation.";
+    }
+    return;
+  }
+
+  messagesElement.querySelector(".empty-state")?.remove();
+  const fragment = document.createDocumentFragment();
+
+  newMessages.forEach((item) => {
+    seenMessageIds.add(String(item.id));
+    fragment.append(createMessageElement(item));
+  });
+
+  messagesElement.append(fragment);
+  messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 
 async function refreshMessages() {
@@ -66,14 +72,17 @@ async function refreshMessages() {
   refreshInProgress = true;
 
   try {
-    const response = await fetch(messagesElement.dataset.messagesUrl, {
+    const url = new URL(messagesElement.dataset.messagesUrl, window.location.origin);
+    url.searchParams.set("_", Date.now());
+    const response = await fetch(url, {
       headers: { Accept: "application/json" },
       cache: "no-store",
+      credentials: "same-origin",
     });
     if (!response.ok) throw new Error("Could not refresh messages.");
 
     const data = await response.json();
-    renderMessages(data.messages);
+    appendNewMessages(data.messages);
     statusElement.classList.remove("status-offline");
     statusElement.lastChild.textContent = " Live";
   } catch (error) {
