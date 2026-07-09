@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 _file_lock = threading.Lock()
+_message_condition = threading.Condition()
 
 
 def _messages_path():
@@ -29,6 +30,22 @@ def get_messages():
         return _read_messages(_messages_path())
 
 
+def get_messages_after(last_id):
+    with _file_lock:
+        return [
+            message
+            for message in _read_messages(_messages_path())
+            if int(message.get("id", 0)) > last_id
+        ]
+
+
+def wait_for_messages_after(last_id, timeout=15):
+    with _message_condition:
+        _message_condition.wait(timeout=timeout)
+
+    return get_messages_after(last_id)
+
+
 def save_message(username, body):
     path = _messages_path()
 
@@ -49,5 +66,8 @@ def save_message(username, body):
             messages_file.flush()
             os.fsync(messages_file.fileno())
         os.replace(temporary_path, path)
+
+    with _message_condition:
+        _message_condition.notify_all()
 
     return message

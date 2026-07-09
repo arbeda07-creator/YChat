@@ -6,8 +6,10 @@ from app.models import User
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+public_auth_bp = Blueprint("public_auth", __name__)
 
 
+@public_auth_bp.route("/register", methods=["GET", "POST"])
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:

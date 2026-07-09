@@ -6,6 +6,7 @@ const errorElement = document.querySelector("#composer-error");
 const statusElement = document.querySelector("#connection-status");
 
 let refreshInProgress = false;
+let messageStream = null;
 const seenMessageIds = new Set();
 
 function formatTime(isoTime) {
@@ -67,6 +68,15 @@ function appendNewMessages(messages) {
   messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 
+function latestSeenMessageId() {
+  return Math.max(...Array.from(seenMessageIds, (id) => Number(id)).filter(Number.isFinite), 0);
+}
+
+function setConnectionStatus(isLive, label) {
+  statusElement.classList.toggle("status-offline", !isLive);
+  statusElement.lastChild.textContent = ` ${label}`;
+}
+
 async function refreshMessages() {
   if (refreshInProgress) return;
   refreshInProgress = true;
@@ -83,14 +93,40 @@ async function refreshMessages() {
 
     const data = await response.json();
     appendNewMessages(data.messages);
-    statusElement.classList.remove("status-offline");
-    statusElement.lastChild.textContent = " Live";
+    setConnectionStatus(true, "Live");
   } catch (error) {
-    statusElement.classList.add("status-offline");
-    statusElement.lastChild.textContent = " Reconnecting";
+    setConnectionStatus(false, "Reconnecting");
   } finally {
     refreshInProgress = false;
   }
+}
+
+function connectMessageStream() {
+  if (!window.EventSource || messageStream) return;
+
+  const url = new URL(messagesElement.dataset.streamUrl, window.location.origin);
+  url.searchParams.set("last_id", latestSeenMessageId());
+  messageStream = new EventSource(url, { withCredentials: true });
+
+  messageStream.addEventListener("open", () => {
+    setConnectionStatus(true, "Live");
+  });
+
+  messageStream.addEventListener("messages", (event) => {
+    const data = JSON.parse(event.data);
+    appendNewMessages(data.messages);
+    setConnectionStatus(true, "Live");
+  });
+
+  messageStream.addEventListener("error", () => {
+    setConnectionStatus(false, "Reconnecting");
+    messageStream.close();
+    messageStream = null;
+    window.setTimeout(async () => {
+      await refreshMessages();
+      connectMessageStream();
+    }, 1500);
+  });
 }
 
 composer.addEventListener("submit", async (event) => {
@@ -114,7 +150,6 @@ composer.addEventListener("submit", async (event) => {
     if (!response.ok) throw new Error(data.error || "Message could not be sent.");
 
     bodyInput.value = "";
-    await refreshMessages();
     bodyInput.focus();
   } catch (error) {
     errorElement.textContent = error.message;
@@ -130,5 +165,7 @@ bodyInput.addEventListener("keydown", (event) => {
   }
 });
 
-refreshMessages();
-window.setInterval(refreshMessages, 2000);
+refreshMessages().then(connectMessageStream);
+window.setInterval(() => {
+  if (!messageStream) refreshMessages();
+}, 5000);

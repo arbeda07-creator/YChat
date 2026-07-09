@@ -19,7 +19,7 @@ def create_app(config_class=None):
     login_manager.login_view = "auth.login"
     login_manager.login_message_category = "info"
 
-    from app.auth.routes import auth_bp
+    from app.auth.routes import auth_bp, public_auth_bp
     from app.chat.routes import chat_bp
     from app.models import User
 
@@ -28,6 +28,7 @@ def create_app(config_class=None):
         return db.session.get(User, int(user_id))
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(public_auth_bp)
     app.register_blueprint(chat_bp)
 
     with app.app_context():
