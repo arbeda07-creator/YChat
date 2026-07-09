@@ -6,7 +6,7 @@
     <title>{% block title %}YChat 2.0{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   </head>
-  <body class="{% block body_class %}{% endblock %}">
+  <body class="{% block body_class %}{% endblock %}{% if current_user.is_authenticated %} has-bottom-nav{% endif %}">
     <div class="app-shell">
       <header class="topbar">
         <a class="brand" href="{{ url_for('chat.index') }}">
@@ -49,6 +49,61 @@
       <main>
         {% block content %}{% endblock %}
       </main>
+
+      {% if current_user.is_authenticated %}
+        <nav class="bottom-nav" aria-label="Primary navigation" data-bottom-nav-summary-url="{{ url_for('chat.private_summary_api') }}">
+          <a class="bottom-nav-item" href="{{ url_for('chat.index') }}" aria-label="Home">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 11.5 12 4l9 7.5"></path>
+              <path d="M5.5 10.5V20h13v-9.5"></path>
+              <path d="M9.5 20v-5h5v5"></path>
+            </svg>
+            <span dir="rtl">&#1575;&#1604;&#1585;&#1574;&#1610;&#1587;&#1610;&#1577;</span>
+          </a>
+
+          <a class="bottom-nav-item{% if request.endpoint in ['chat.index', 'chat.private_chat'] %} active{% endif %}" href="{{ url_for('chat.index') }}" aria-label="Chats">
+            <span class="bottom-nav-icon-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 12a7.5 7.5 0 0 1-7.5 7.5H8l-5 3 1.7-5A7.5 7.5 0 1 1 21 12Z"></path>
+              </svg>
+              <span class="nav-badge private-badge{% if inbox is not defined or not inbox.private_unread_count %} is-hidden{% endif %}" data-private-badge>
+                {{ inbox.private_unread_count if inbox is defined else 0 }}
+              </span>
+            </span>
+            <span dir="rtl">&#1588;&#1575;&#1578;</span>
+          </a>
+
+          <a class="bottom-nav-create{% if request.endpoint == 'chat.user_search' %} active{% endif %}" href="{{ url_for('chat.user_search') }}" aria-label="New chat">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14"></path>
+              <path d="M5 12h14"></path>
+            </svg>
+            <span class="sr-only">New Chat</span>
+          </a>
+
+          <a class="bottom-nav-item{% if request.endpoint == 'chat.message_requests' %} active{% endif %}" href="{{ url_for('chat.message_requests') }}" aria-label="Notifications">
+            <span class="bottom-nav-icon-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+                <path d="M10 21h4"></path>
+              </svg>
+              <span class="nav-badge request-badge{% if inbox is not defined or not inbox.request_count %} is-hidden{% endif %}" data-request-badge>
+                {{ inbox.request_count if inbox is defined else 0 }}
+              </span>
+            </span>
+            <span dir="rtl">&#1575;&#1604;&#1573;&#1588;&#1593;&#1575;&#1585;&#1575;&#1578;</span>
+          </a>
+
+          <a class="bottom-nav-item{% if request.endpoint == 'auth.profile' %} active{% endif %}" href="{{ url_for('auth.profile') }}" aria-label="Profile">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 21a8 8 0 0 0-16 0"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span dir="rtl">&#1575;&#1604;&#1605;&#1604;&#1601;</span>
+          </a>
+        </nav>
+        <script src="{{ url_for('static', filename='js/direct.js', v='nav.1') }}" defer></script>
+      {% endif %}
     </div>
     {% block scripts %}{% endblock %}
   </body>

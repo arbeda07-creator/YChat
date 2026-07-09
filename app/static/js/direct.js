@@ -1,6 +1,7 @@
 const directShell = document.querySelector(".direct-shell");
-const privateBadge = document.querySelector("[data-private-badge]");
-const requestBadge = document.querySelector("[data-request-badge]");
+const summarySource = directShell || document.querySelector("[data-bottom-nav-summary-url]");
+const privateBadges = document.querySelectorAll("[data-private-badge]");
+const requestBadges = document.querySelectorAll("[data-request-badge]");
 const privateList = document.querySelector("[data-private-list]");
 const requestsList = document.querySelector("[data-requests-list]");
 
@@ -16,6 +17,10 @@ function updateBadge(element, count) {
   element.classList.toggle("is-hidden", !count);
 }
 
+function updateBadges(elements, count) {
+  elements.forEach((element) => updateBadge(element, count));
+}
+
 function avatarMarkup(item) {
   if (item.avatar_url) {
     return `<img class="avatar" src="${escapeHtml(item.avatar_url)}" alt="">`;
@@ -24,8 +29,8 @@ function avatarMarkup(item) {
 }
 
 function refreshBadges(summary) {
-  updateBadge(privateBadge, summary.private_unread_count || 0);
-  updateBadge(requestBadge, summary.request_count || 0);
+  updateBadges(privateBadges, summary.private_unread_count || 0);
+  updateBadges(requestBadges, summary.request_count || 0);
 }
 
 function renderPrivateList(conversations) {
@@ -79,10 +84,10 @@ function refreshDirect(summary) {
 }
 
 async function fetchSummary() {
-  if (!directShell) return;
+  if (!summarySource) return;
 
   try {
-    const response = await fetch(directShell.dataset.summaryUrl, {
+    const response = await fetch(summarySource.dataset.summaryUrl || summarySource.dataset.bottomNavSummaryUrl, {
       headers: { Accept: "application/json" },
       cache: "no-store",
       credentials: "same-origin",
