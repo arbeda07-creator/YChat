@@ -34,6 +34,7 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = False
+    FORCE_HTTPS = os.environ.get("FORCE_HTTPS", "").lower() in {"1", "true", "yes"}
 
 
 class DevelopmentConfig(Config):
@@ -45,6 +46,7 @@ class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = normalize_database_url(os.environ.get("DATABASE_URL"))
     SESSION_COOKIE_SECURE = True
     PREFERRED_URL_SCHEME = "https"
+    FORCE_HTTPS = True
 
     @classmethod
     def init_app(cls):
