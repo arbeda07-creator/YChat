@@ -4,6 +4,7 @@ const bodyInput = document.querySelector("#body");
 const sendButton = composer.querySelector("button[type='submit']");
 const errorElement = document.querySelector("#composer-error");
 const statusElement = document.querySelector("#connection-status");
+const deleteChatButton = document.querySelector("[data-delete-chat-url]");
 
 let refreshInProgress = false;
 const seenMessageIds = new Set();
@@ -39,28 +40,58 @@ function createMessageElement(item) {
   const message = document.createElement("p");
   message.textContent = item.message;
 
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "message-delete";
+  deleteButton.type = "button";
+  deleteButton.dataset.messageId = item.id;
+  deleteButton.textContent = "Delete";
+
   meta.append(username, time);
   article.append(meta, message);
+  if (messagesElement.dataset.deleteMessageUrlTemplate) {
+    article.append(deleteButton);
+  }
   return article;
 }
 
-function appendNewMessages(messages) {
+function visibleConversationMessages(messages) {
   const conversationUser = messagesElement.dataset.conversationUser;
   const currentUser = messagesElement.dataset.currentUser;
-  const newMessages = messages.filter((item) => {
-    if (seenMessageIds.has(String(item.id))) return false;
+
+  return messages.filter((item) => {
     if (!conversationUser) return true;
     return (
       (item.username === currentUser && item.receiver === conversationUser) ||
       (item.username === conversationUser && item.receiver === currentUser)
     );
   });
+}
+
+function syncRemovedMessages(messages) {
+  const visibleIds = new Set(messages.map((item) => String(item.id)));
+  messagesElement.querySelectorAll("[data-message-id]").forEach((element) => {
+    if (!visibleIds.has(element.dataset.messageId)) {
+      element.remove();
+    }
+  });
+}
+
+function showEmptyState() {
+  if (messagesElement.querySelector(".empty-state")) return;
+
+  const emptyState = document.createElement("div");
+  emptyState.className = "empty-state";
+  emptyState.textContent = "No messages yet. Start the conversation.";
+  messagesElement.append(emptyState);
+}
+
+function appendNewMessages(messages) {
+  const visibleMessages = visibleConversationMessages(messages);
+  syncRemovedMessages(visibleMessages);
+  const newMessages = visibleMessages.filter((item) => !seenMessageIds.has(String(item.id)));
 
   if (newMessages.length === 0) {
-    if (messages.length === 0 && seenMessageIds.size === 0) {
-      messagesElement.querySelector(".empty-state").textContent =
-        "No messages yet. Start the conversation.";
-    }
+    if (visibleMessages.length === 0) showEmptyState();
     return;
   }
 
@@ -139,6 +170,48 @@ bodyInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     composer.requestSubmit();
+  }
+});
+
+messagesElement.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-message-id]");
+  if (!button || !button.classList.contains("message-delete")) return;
+
+  const url = new URL(messagesElement.dataset.deleteMessageUrlTemplate, window.location.origin);
+  url.pathname = url.pathname.replace(/\/0$/, `/${button.dataset.messageId}`);
+  button.disabled = true;
+
+  try {
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+    if (!response.ok) throw new Error("Message could not be deleted.");
+    button.closest(".message")?.remove();
+    await refreshMessages();
+  } catch (error) {
+    button.disabled = false;
+    errorElement.textContent = error.message;
+  }
+});
+
+deleteChatButton?.addEventListener("click", async () => {
+  if (!window.confirm("Delete this chat?")) return;
+
+  deleteChatButton.disabled = true;
+  try {
+    const response = await fetch(deleteChatButton.dataset.deleteChatUrl, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Chat could not be deleted.");
+    window.location.href = data.redirect || "/";
+  } catch (error) {
+    deleteChatButton.disabled = false;
+    errorElement.textContent = error.message;
   }
 });
 

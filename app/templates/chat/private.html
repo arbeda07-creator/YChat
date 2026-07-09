@@ -14,6 +14,13 @@
           <p>Only you and {{ other_user.username }} can see these messages.</p>
         {% endif %}
       </div>
+      <button
+        class="button button-ghost delete-chat-button"
+        type="button"
+        data-delete-chat-url="{{ url_for('chat.delete_private_conversation_api', username=other_user.username) }}"
+      >
+        Delete chat
+      </button>
       <span class="connection-status" id="connection-status" role="status">
         <span class="status-dot"></span>
         Live
@@ -28,6 +35,7 @@
       data-conversation-user="{{ other_user.username }}"
       data-messages-url="{{ url_for('chat.private_messages_api', username=other_user.username) }}"
       data-send-url="{{ url_for('chat.send_private_api', username=other_user.username) }}"
+      data-delete-message-url-template="{{ url_for('chat.delete_private_message_api', username=other_user.username, message_id=0) }}"
     >
       <div class="empty-state">Loading messages...</div>
     </div>

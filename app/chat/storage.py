@@ -285,6 +285,43 @@ def reject_message_request(receiver, requester):
     return changed
 
 
+def delete_private_message(username, other_username, message_id):
+    path = _private_messages_path()
+
+    with _file_lock:
+        messages = _private_messages()
+        next_messages = [
+            message
+            for message in messages
+            if not (
+                int(message.get("id", 0)) == message_id
+                and _conversation_matches(message, username, other_username)
+            )
+        ]
+        changed = len(next_messages) != len(messages)
+        if changed:
+            _write_private_messages(path, next_messages)
+
+    return changed
+
+
+def delete_private_conversation(username, other_username):
+    path = _private_messages_path()
+
+    with _file_lock:
+        messages = _private_messages()
+        next_messages = [
+            message
+            for message in messages
+            if not _conversation_matches(message, username, other_username)
+        ]
+        changed = len(next_messages) != len(messages)
+        if changed:
+            _write_private_messages(path, next_messages)
+
+    return changed
+
+
 def save_message(username, body):
     path = _messages_path()
 

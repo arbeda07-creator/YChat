@@ -14,6 +14,8 @@ from flask_login import current_user, login_required
 
 from app.chat.storage import (
     accept_message_request,
+    delete_private_conversation,
+    delete_private_message,
     get_conversation_status,
     get_messages,
     get_private_inbox,
@@ -159,6 +161,30 @@ def send_private_api(username):
         return jsonify({"error": "This message request was rejected."}), 403
 
     return jsonify({"message": _message_payload(message)}), 201
+
+
+@chat_bp.delete("/api/dm/<username>/messages/<int:message_id>")
+@login_required
+def delete_private_message_api(username, message_id):
+    other_user = User.query.filter_by(username=username).first_or_404()
+    if other_user.id == current_user.id:
+        return abort(404)
+
+    if not delete_private_message(current_user.username, other_user.username, message_id):
+        return jsonify({"error": "Message was not found."}), 404
+
+    return jsonify({"ok": True})
+
+
+@chat_bp.delete("/api/dm/<username>/conversation")
+@login_required
+def delete_private_conversation_api(username):
+    other_user = User.query.filter_by(username=username).first_or_404()
+    if other_user.id == current_user.id:
+        return abort(404)
+
+    delete_private_conversation(current_user.username, other_user.username)
+    return jsonify({"ok": True, "redirect": url_for("chat.index")})
 
 
 @chat_bp.post("/api/dm/<username>/accept")
