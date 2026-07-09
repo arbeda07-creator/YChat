@@ -137,6 +137,10 @@ a:hover {
   padding: 32px;
 }
 
+.users-panel {
+  max-width: 620px;
+}
+
 h1 {
   font-size: 2rem;
   line-height: 1.15;
@@ -157,6 +161,32 @@ p {
   display: grid;
   gap: 10px;
   margin: 24px 0;
+}
+
+.search-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.user-results {
+  display: grid;
+  gap: 10px;
+}
+
+.user-result {
+  align-items: center;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.user-result small {
+  color: var(--muted);
 }
 
 label {

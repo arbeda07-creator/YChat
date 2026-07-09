@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Chat - YChat 2.0{% endblock %}
+{% block title %}Chat with {{ other_user.username }} - YChat 2.0{% endblock %}
 
 {% block content %}
   <section class="chat-layout">
     <div class="chat-header">
       <div>
-        <span class="eyebrow">YChat Version 2</span>
-        <h1>Team Chat</h1>
-        <p>Messages update automatically every two seconds.</p>
+        <span class="eyebrow">Private Chat</span>
+        <h1>{{ other_user.username }}</h1>
+        <p>Only you and {{ other_user.username }} can see these messages.</p>
       </div>
       <span class="connection-status" id="connection-status" role="status">
         <span class="status-dot"></span>
@@ -21,16 +21,15 @@
       id="messages"
       aria-live="polite"
       data-current-user="{{ current_user.username }}"
-      data-messages-url="{{ url_for('chat.messages_api') }}"
-      data-stream-url="{{ url_for('chat.messages_stream_api') }}"
-      data-send-url="{{ url_for('chat.send_api') }}"
+      data-messages-url="{{ url_for('chat.private_messages_api', username=other_user.username) }}"
+      data-send-url="{{ url_for('chat.send_private_api', username=other_user.username) }}"
     >
-      <div class="empty-state">Loading messages…</div>
+      <div class="empty-state">Loading messages...</div>
     </div>
 
     <form class="composer" id="composer">
       <label class="sr-only" for="body">Message</label>
-      <textarea id="body" name="body" rows="2" maxlength="2000" placeholder="Write a message…" required></textarea>
+      <textarea id="body" name="body" rows="2" maxlength="2000" placeholder="Write a private message..." required></textarea>
       <button class="button button-primary send-button" type="submit">Send</button>
       <p class="composer-error" id="composer-error" role="alert"></p>
     </form>

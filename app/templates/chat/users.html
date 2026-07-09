@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Find Users - YChat 2.0{% endblock %}
+
+{% block content %}
+  <section class="auth-panel users-panel">
+    <h1>Find users</h1>
+    <p>Search by username to start a private chat.</p>
+
+    <form class="form search-form" method="get">
+      <label for="q">Username</label>
+      <div class="search-row">
+        <input id="q" name="q" value="{{ query }}" placeholder="Search users..." autocomplete="off">
+        <button class="button button-primary" type="submit">Search</button>
+      </div>
+    </form>
+
+    {% if query %}
+      <div class="user-results">
+        {% if users %}
+          {% for user in users %}
+            <a class="user-result" href="{{ url_for('chat.private_chat', username=user.username) }}">
+              <span>{{ user.username }}</span>
+              <small>Open private chat</small>
+            </a>
+          {% endfor %}
+        {% else %}
+          <p class="muted">No users found.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}
