@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - YChat 2.0{% endblock %}
+
+{% block content %}
+  <section class="profile-panel">
+    <div class="profile-preview">
+      {% if current_user.profile_image %}
+        <img class="avatar avatar-large" src="{{ url_for('static', filename='uploads/' ~ current_user.profile_image) }}" alt="">
+      {% else %}
+        <span class="avatar avatar-large">{{ current_user.username[:1]|upper }}</span>
+      {% endif %}
+      <div>
+        <span class="eyebrow">Your Profile</span>
+        <h1>{{ current_user.display_label }}</h1>
+        <p>{{ current_user.bio or "Add a short status so friends know what's up." }}</p>
+      </div>
+    </div>
+
+    <form class="form" method="post" enctype="multipart/form-data">
+      <label for="display_name">Display name</label>
+      <input id="display_name" name="display_name" maxlength="120" value="{{ current_user.display_name or '' }}" placeholder="{{ current_user.username }}">
+
+      <label for="bio">Bio / status</label>
+      <textarea id="bio" name="bio" rows="3" maxlength="280" placeholder="Write a short status...">{{ current_user.bio or '' }}</textarea>
+
+      <label for="profile_image">Profile picture</label>
+      <input id="profile_image" name="profile_image" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+
+      <button class="button button-primary" type="submit">Save profile</button>
+    </form>
+  </section>
+{% endblock %}

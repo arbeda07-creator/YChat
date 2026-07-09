@@ -16,6 +16,13 @@ function updateBadge(element, count) {
   element.classList.toggle("is-hidden", !count);
 }
 
+function avatarMarkup(item) {
+  if (item.avatar_url) {
+    return `<img class="avatar" src="${escapeHtml(item.avatar_url)}" alt="">`;
+  }
+  return `<span class="avatar">${escapeHtml(item.initial || item.username.slice(0, 1).toUpperCase())}</span>`;
+}
+
 function refreshBadges(summary) {
   updateBadge(privateBadge, summary.private_unread_count || 0);
   updateBadge(requestBadge, summary.request_count || 0);
@@ -30,9 +37,9 @@ function renderPrivateList(conversations) {
 
   privateList.innerHTML = conversations.map((conversation) => `
     <a class="conversation-item" href="/dm/${encodeURIComponent(conversation.username)}">
-      <span class="avatar">${escapeHtml(conversation.username.slice(0, 1).toUpperCase())}</span>
+      ${avatarMarkup(conversation)}
       <span class="conversation-copy">
-        <strong>${escapeHtml(conversation.username)}</strong>
+        <strong>${escapeHtml(conversation.display_name || conversation.username)}</strong>
         <small>${escapeHtml(conversation.last_message.message)}</small>
       </span>
       ${conversation.unread ? `<span class="badge">${conversation.unread}</span>` : ""}
@@ -49,9 +56,9 @@ function renderRequestsList(requests) {
 
   requestsList.innerHTML = requests.map((conversation) => `
     <article class="conversation-item request-item" data-request-user="${escapeHtml(conversation.username)}">
-      <span class="avatar">${escapeHtml(conversation.username.slice(0, 1).toUpperCase())}</span>
+      ${avatarMarkup(conversation)}
       <span class="conversation-copy">
-        <strong>${escapeHtml(conversation.username)}</strong>
+        <strong>${escapeHtml(conversation.display_name || conversation.username)}</strong>
         <small>${escapeHtml(conversation.last_message.message)}</small>
       </span>
       <span class="request-actions">

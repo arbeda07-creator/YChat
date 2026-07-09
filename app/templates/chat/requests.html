@@ -7,19 +7,19 @@
     <header class="direct-header">
       <div>
         <span class="eyebrow">YChat Direct</span>
-        <h1>طلبات المراسلة</h1>
+        <h1 dir="rtl">طلبات المراسلة</h1>
       </div>
     </header>
 
     <nav class="direct-tabs" aria-label="Direct tabs">
       <a class="direct-tab" href="{{ url_for('chat.index') }}">
-        الخاص
+        <span dir="rtl">الخاص</span>
         <span class="badge private-badge{% if not inbox.private_unread_count %} is-hidden{% endif %}" data-private-badge>
           {{ inbox.private_unread_count }}
         </span>
       </a>
       <a class="direct-tab active" href="{{ url_for('chat.message_requests') }}">
-        طلبات المراسلة
+        <span dir="rtl">طلبات المراسلة</span>
         <span class="badge request-badge{% if not inbox.request_count %} is-hidden{% endif %}" data-request-badge>
           {{ inbox.request_count }}
         </span>
@@ -32,9 +32,13 @@
         {% if inbox.requests %}
           {% for conversation in inbox.requests %}
             <article class="conversation-item request-item" data-request-user="{{ conversation.username }}">
-              <span class="avatar">{{ conversation.username[:1]|upper }}</span>
+              {% if conversation.avatar_url %}
+                <img class="avatar" src="{{ conversation.avatar_url }}" alt="">
+              {% else %}
+                <span class="avatar">{{ conversation.initial }}</span>
+              {% endif %}
               <span class="conversation-copy">
-                <strong>{{ conversation.username }}</strong>
+                <strong>{{ conversation.display_name }}</strong>
                 <small>{{ conversation.last_message.message }}</small>
               </span>
               <span class="request-actions">
@@ -52,5 +56,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/direct.js', v='1.1') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/direct.js', v='1.2') }}" defer></script>
 {% endblock %}

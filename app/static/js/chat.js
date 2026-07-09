@@ -27,11 +27,20 @@ function createMessageElement(item) {
     article.classList.add("message-own");
   }
 
+  const avatar = document.createElement(item.avatar_url ? "img" : "span");
+  avatar.className = "message-avatar";
+  if (item.avatar_url) {
+    avatar.src = item.avatar_url;
+    avatar.alt = "";
+  } else {
+    avatar.textContent = item.initial || item.username.slice(0, 1).toUpperCase();
+  }
+
   const meta = document.createElement("div");
   meta.className = "message-meta";
 
   const username = document.createElement("strong");
-  username.textContent = item.username;
+  username.textContent = item.display_name || item.username;
 
   const time = document.createElement("time");
   time.dateTime = item.time;
@@ -47,7 +56,7 @@ function createMessageElement(item) {
   deleteButton.textContent = "Delete";
 
   meta.append(username, time);
-  article.append(meta, message);
+  article.append(avatar, meta, message);
   if (messagesElement.dataset.deleteMessageUrlTemplate) {
     article.append(deleteButton);
   }

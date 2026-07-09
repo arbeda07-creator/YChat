@@ -25,6 +25,11 @@ class Config:
         "PRIVATE_MESSAGES_FILE",
         str(BASE_DIR / "instance" / "private_messages.json"),
     )
+    UPLOAD_FOLDER = os.environ.get(
+        "UPLOAD_FOLDER",
+        str(BASE_DIR / "app" / "static" / "uploads"),
+    )
+    MAX_CONTENT_LENGTH = 2 * 1024 * 1024
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

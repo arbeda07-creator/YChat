@@ -37,7 +37,7 @@ chat_bp = Blueprint("chat", __name__)
 def index():
     query = request.args.get("q", "").strip()
     users = _search_users(query)
-    inbox = get_private_inbox(current_user.username)
+    inbox = _enrich_inbox(get_private_inbox(current_user.username))
     return render_template(
         "chat/index.html",
         active_tab="private",
@@ -51,7 +51,7 @@ def index():
 @login_required
 def message_requests():
     query = request.args.get("q", "").strip()
-    inbox = get_private_inbox(current_user.username)
+    inbox = _enrich_inbox(get_private_inbox(current_user.username))
     return render_template(
         "chat/requests.html",
         active_tab="requests",
@@ -73,14 +73,46 @@ def _search_users(query):
     )
 
 
-def _message_payload(message):
+def _message_payload(message, user_cards=None):
+    user_cards = user_cards or {}
+    sender = user_cards.get(message["sender"]) or _user_card(message["sender"])
     return {
         "id": message["id"],
         "username": message["sender"],
+        "display_name": sender["display_name"],
+        "avatar_url": sender["avatar_url"],
+        "initial": sender["initial"],
         "receiver": message["receiver"],
         "time": message["time"],
         "message": message["message"],
     }
+
+
+def _message_payloads(messages, *usernames):
+    user_cards = {username: _user_card(username) for username in usernames}
+    return [_message_payload(message, user_cards) for message in messages]
+
+
+def _user_card(username):
+    user = User.query.filter_by(username=username).first()
+    display_name = user.display_label if user else username
+    profile_image = user.profile_image if user else None
+    return {
+        "username": username,
+        "display_name": display_name,
+        "avatar_url": url_for("static", filename=f"uploads/{profile_image}")
+        if profile_image
+        else None,
+        "initial": (display_name or username)[:1].upper(),
+        "bio": user.bio if user else None,
+    }
+
+
+def _enrich_inbox(inbox):
+    for collection_name in ("private", "requests"):
+        for conversation in inbox[collection_name]:
+            conversation.update(_user_card(conversation["username"]))
+    return inbox
 
 
 @chat_bp.get("/users")
@@ -134,7 +166,11 @@ def private_messages_api(username):
     response = jsonify(
         {
             "status": status,
-            "messages": [_message_payload(message) for message in messages],
+            "messages": _message_payloads(
+                messages,
+                current_user.username,
+                other_user.username,
+            ),
         }
     )
     response.headers["Cache-Control"] = "no-store"
@@ -216,7 +252,7 @@ def reject_private_request_api(username):
 @chat_bp.get("/api/dm/summary")
 @login_required
 def private_summary_api():
-    response = jsonify(get_private_inbox(current_user.username))
+    response = jsonify(_enrich_inbox(get_private_inbox(current_user.username)))
     response.headers["Cache-Control"] = "no-store"
     return response
 

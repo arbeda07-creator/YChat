@@ -1,5 +1,6 @@
 from flask import Flask
 from pathlib import Path
+from sqlalchemy import inspect, text
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import get_config
@@ -33,5 +34,23 @@ def create_app(config_class=None):
 
     with app.app_context():
         db.create_all()
+        _ensure_user_profile_columns()
 
     return app
+
+
+def _ensure_user_profile_columns():
+    existing_columns = {column["name"] for column in inspect(db.engine).get_columns("user")}
+    missing_columns = {
+        "display_name": "VARCHAR(120)",
+        "bio": "VARCHAR(280)",
+        "profile_image": "VARCHAR(255)",
+    }
+
+    table_name = '"user"' if db.engine.dialect.name != "sqlite" else "user"
+    for column_name, column_type in missing_columns.items():
+        if column_name not in existing_columns:
+            db.session.execute(
+                text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+            )
+    db.session.commit()

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="auto">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,14 @@
         <a class="brand" href="{{ url_for('chat.index') }}">YChat 2.0</a>
         <nav class="nav">
           {% if current_user.is_authenticated %}
-            <span class="nav-user">{{ current_user.username }}</span>
+            <a class="profile-link" href="{{ url_for('auth.profile') }}" aria-label="Profile">
+              {% if current_user.profile_image %}
+                <img class="nav-avatar" src="{{ url_for('static', filename='uploads/' ~ current_user.profile_image) }}" alt="">
+              {% else %}
+                <span class="nav-avatar nav-avatar-fallback">{{ current_user.username[:1]|upper }}</span>
+              {% endif %}
+              <span class="nav-user">{{ current_user.display_label }}</span>
+            </a>
             <form action="{{ url_for('auth.logout') }}" method="post">
               <button class="button button-ghost" type="submit">Logout</button>
             </form>

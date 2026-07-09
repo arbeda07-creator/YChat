@@ -23,6 +23,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  unicode-bidi: plaintext;
   background-image:
     radial-gradient(circle at 5% 0%, rgba(91, 91, 214, 0.12), transparent 30%),
     radial-gradient(circle at 100% 100%, rgba(4, 124, 138, 0.1), transparent 32%);
@@ -71,6 +72,29 @@ a:hover {
 .nav-user {
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.profile-link {
+  align-items: center;
+  color: var(--text);
+  display: inline-flex;
+  gap: 8px;
+}
+
+.nav-avatar {
+  border-radius: 50%;
+  height: 34px;
+  object-fit: cover;
+  width: 34px;
+}
+
+.nav-avatar-fallback {
+  align-items: center;
+  background: linear-gradient(135deg, var(--primary), #00a884);
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 900;
+  justify-content: center;
 }
 
 .button {
@@ -137,6 +161,22 @@ a:hover {
   padding: 32px;
 }
 
+.profile-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  margin: 32px auto 0;
+  max-width: 680px;
+  padding: 28px;
+}
+
+.profile-preview {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+}
+
 .users-panel {
   max-width: 620px;
 }
@@ -183,6 +223,16 @@ p {
   display: flex;
   justify-content: space-between;
   padding: 14px;
+}
+
+.user-result-main {
+  align-items: center;
+  display: inline-flex;
+  gap: 12px;
+}
+
+.user-result-main span:last-child {
+  display: grid;
 }
 
 .user-result small {
@@ -319,7 +369,19 @@ p {
   font-weight: 900;
   height: 54px;
   justify-content: center;
+  object-fit: cover;
   width: 54px;
+}
+
+.avatar-small {
+  height: 42px;
+  width: 42px;
+}
+
+.avatar-large {
+  flex: 0 0 auto;
+  height: 86px;
+  width: 86px;
 }
 
 .conversation-copy {
@@ -386,6 +448,13 @@ textarea:focus {
   display: flex;
   justify-content: space-between;
   padding: 22px 24px;
+}
+
+.chat-title-row {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  min-width: 0;
 }
 
 .chat-header h1 {
@@ -474,6 +543,25 @@ textarea:focus {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.message-avatar {
+  border-radius: 50%;
+  float: left;
+  height: 28px;
+  margin: 0 9px 4px 0;
+  object-fit: cover;
+  width: 28px;
+}
+
+span.message-avatar {
+  align-items: center;
+  background: linear-gradient(135deg, var(--primary), #00a884);
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 900;
+  justify-content: center;
 }
 
 .message-delete {
@@ -571,6 +659,15 @@ textarea:focus {
     padding: 24px;
   }
 
+  .profile-panel {
+    margin-top: 18px;
+    padding: 20px;
+  }
+
+  .profile-preview {
+    align-items: flex-start;
+  }
+
   .chat-layout {
     height: calc(100dvh - 142px);
     min-height: 520px;
@@ -657,6 +754,11 @@ textarea:focus {
     padding: 14px 16px;
   }
 
+  .chat-title-row .avatar {
+    height: 44px;
+    width: 44px;
+  }
+
   .chat-header p {
     display: none;
   }
@@ -693,5 +795,10 @@ textarea:focus {
   .avatar {
     height: 48px;
     width: 48px;
+  }
+
+  .avatar-large {
+    height: 72px;
+    width: 72px;
   }
 }

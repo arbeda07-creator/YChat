@@ -5,14 +5,21 @@
 {% block content %}
   <section class="chat-layout">
     <div class="chat-header">
-      <div>
-        <span class="eyebrow">Private Chat</span>
-        <h1>{{ other_user.username }}</h1>
-        {% if conversation_status == "pending" %}
-          <p>This message is waiting for approval.</p>
+      <div class="chat-title-row">
+        {% if other_user.profile_image %}
+          <img class="avatar" src="{{ url_for('static', filename='uploads/' ~ other_user.profile_image) }}" alt="">
         {% else %}
-          <p>Only you and {{ other_user.username }} can see these messages.</p>
+          <span class="avatar">{{ other_user.display_label[:1]|upper }}</span>
         {% endif %}
+        <div>
+          <span class="eyebrow">Private Chat</span>
+          <h1>{{ other_user.display_label }}</h1>
+          {% if conversation_status == "pending" %}
+            <p>This message is waiting for approval.</p>
+          {% else %}
+            <p>{{ other_user.bio or "Only you two can see these messages." }}</p>
+          {% endif %}
+        </div>
       </div>
       <button
         class="button button-ghost delete-chat-button"
@@ -50,5 +57,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/chat.js', v='2.5') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/chat.js', v='2.6') }}" defer></script>
 {% endblock %}
