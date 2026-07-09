@@ -5,6 +5,7 @@
 {% block content %}
   <section class="chat-layout">
     <div class="chat-header">
+      <a class="icon-button back-button" href="{{ url_for('chat.index') }}" aria-label="Back">‹</a>
       <div class="chat-title-row">
         {% if other_user.profile_image %}
           <img class="avatar" src="{{ url_for('static', filename='uploads/' ~ other_user.profile_image) }}" alt="">
@@ -22,13 +23,14 @@
         </div>
       </div>
       <button
-        class="button button-ghost delete-chat-button"
+        class="icon-button delete-chat-button"
         type="button"
         data-delete-chat-url="{{ url_for('chat.delete_private_conversation_api', username=other_user.username) }}"
+        aria-label="Delete chat"
       >
-        Delete chat
+        ⋮
       </button>
-      <span class="connection-status" id="connection-status" role="status">
+      <span class="connection-status" id="connection-status" role="status" hidden>
         <span class="status-dot"></span>
         Live
       </span>
@@ -50,12 +52,12 @@
     <form class="composer" id="composer">
       <label class="sr-only" for="body">Message</label>
       <textarea id="body" name="body" rows="2" maxlength="2000" placeholder="Write a private message..." required></textarea>
-      <button class="button button-primary send-button" type="submit">Send</button>
+      <button class="button button-primary send-button" type="submit" aria-label="Send">➤</button>
       <p class="composer-error" id="composer-error" role="alert"></p>
     </form>
   </section>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/chat.js', v='2.6') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/chat.js', v='3.0') }}" defer></script>
 {% endblock %}

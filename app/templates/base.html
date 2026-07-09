@@ -6,10 +6,13 @@
     <title>{% block title %}YChat 2.0{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   </head>
-  <body>
+  <body class="{% block body_class %}{% endblock %}">
     <div class="app-shell">
       <header class="topbar">
-        <a class="brand" href="{{ url_for('chat.index') }}">YChat 2.0</a>
+        <a class="brand" href="{{ url_for('chat.index') }}">
+          <span class="brand-icon">Y</span>
+          <span>YChat 2.0</span>
+        </a>
         <nav class="nav">
           {% if current_user.is_authenticated %}
             <a class="profile-link" href="{{ url_for('auth.profile') }}" aria-label="Profile">
@@ -18,7 +21,10 @@
               {% else %}
                 <span class="nav-avatar nav-avatar-fallback">{{ current_user.username[:1]|upper }}</span>
               {% endif %}
-              <span class="nav-user">{{ current_user.display_label }}</span>
+              <span class="nav-user">
+                <strong>{{ current_user.display_label }}</strong>
+                <small>متصل</small>
+              </span>
             </a>
             <form action="{{ url_for('auth.logout') }}" method="post">
               <button class="button button-ghost" type="submit">Logout</button>

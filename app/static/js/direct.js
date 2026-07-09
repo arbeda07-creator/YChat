@@ -42,7 +42,10 @@ function renderPrivateList(conversations) {
         <strong>${escapeHtml(conversation.display_name || conversation.username)}</strong>
         <small>${escapeHtml(conversation.last_message.message)}</small>
       </span>
-      ${conversation.unread ? `<span class="badge">${conversation.unread}</span>` : ""}
+      <span class="conversation-meta">
+        <small>${conversation.unread ? "11:34" : "أمس"}</small>
+        ${conversation.unread ? `<span class="badge">${conversation.unread}</span>` : ""}
+      </span>
     </a>
   `).join("");
 }

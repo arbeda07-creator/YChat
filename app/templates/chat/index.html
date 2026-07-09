@@ -5,32 +5,40 @@
 {% block content %}
   <section class="direct-shell" data-summary-url="{{ url_for('chat.private_summary_api') }}">
     <header class="direct-header">
+      <button class="icon-button" type="button" aria-label="Menu">☰</button>
       <div>
         <span class="eyebrow">YChat Direct</span>
-        <h1 dir="rtl">الخاص</h1>
+        <h1>YChat 2.0</h1>
       </div>
-      <a class="compose-link" href="#user-search" aria-label="Search users">+</a>
+      <a class="profile-chip" href="{{ url_for('auth.profile') }}">
+        <span dir="rtl">{{ current_user.display_label }}</span>
+        {% if current_user.profile_image %}
+          <img class="nav-avatar" src="{{ url_for('static', filename='uploads/' ~ current_user.profile_image) }}" alt="">
+        {% else %}
+          <span class="nav-avatar nav-avatar-fallback">{{ current_user.display_label[:1]|upper }}</span>
+        {% endif %}
+      </a>
     </header>
 
+    <form class="direct-search" id="user-search" method="get">
+      <input name="q" value="{{ query }}" placeholder="بحث عن مستخدم أو محادثة..." autocomplete="off" dir="auto">
+      <button class="button button-primary compose-button" type="submit">+</button>
+    </form>
+
     <nav class="direct-tabs" aria-label="Direct tabs">
-      <a class="direct-tab active" href="{{ url_for('chat.index') }}">
-        <span dir="rtl">الخاص</span>
-        <span class="badge private-badge{% if not inbox.private_unread_count %} is-hidden{% endif %}" data-private-badge>
-          {{ inbox.private_unread_count }}
-        </span>
-      </a>
       <a class="direct-tab" href="{{ url_for('chat.message_requests') }}">
         <span dir="rtl">طلبات المراسلة</span>
         <span class="badge request-badge{% if not inbox.request_count %} is-hidden{% endif %}" data-request-badge>
           {{ inbox.request_count }}
         </span>
       </a>
+      <a class="direct-tab active" href="{{ url_for('chat.index') }}">
+        <span dir="rtl">الخاص</span>
+        <span class="badge private-badge{% if not inbox.private_unread_count %} is-hidden{% endif %}" data-private-badge>
+          {{ inbox.private_unread_count }}
+        </span>
+      </a>
     </nav>
-
-    <form class="direct-search" id="user-search" method="get">
-      <input name="q" value="{{ query }}" placeholder="Search users..." autocomplete="off">
-      <button class="button button-primary" type="submit">Search</button>
-    </form>
 
     {% if query %}
       <div class="direct-section">
@@ -58,7 +66,6 @@
     {% endif %}
 
     <div class="direct-section">
-      <h2>Messages</h2>
       <div class="conversation-list" data-private-list>
         {% if inbox.private %}
           {% for conversation in inbox.private %}
@@ -72,9 +79,12 @@
                 <strong>{{ conversation.display_name }}</strong>
                 <small>{{ conversation.last_message.message }}</small>
               </span>
-              {% if conversation.unread %}
-                <span class="badge">{{ conversation.unread }}</span>
-              {% endif %}
+              <span class="conversation-meta">
+                <small>{{ "11:34" if conversation.unread else "أمس" }}</small>
+                {% if conversation.unread %}
+                  <span class="badge">{{ conversation.unread }}</span>
+                {% endif %}
+              </span>
             </a>
           {% endfor %}
         {% else %}
@@ -86,5 +96,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/direct.js', v='1.2') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/direct.js', v='2.0') }}" defer></script>
 {% endblock %}

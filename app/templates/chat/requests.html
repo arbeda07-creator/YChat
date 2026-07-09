@@ -5,29 +5,37 @@
 {% block content %}
   <section class="direct-shell" data-summary-url="{{ url_for('chat.private_summary_api') }}">
     <header class="direct-header">
+      <button class="icon-button" type="button" aria-label="Menu">☰</button>
       <div>
         <span class="eyebrow">YChat Direct</span>
         <h1 dir="rtl">طلبات المراسلة</h1>
       </div>
+      <a class="profile-chip" href="{{ url_for('auth.profile') }}">
+        <span dir="rtl">{{ current_user.display_label }}</span>
+        {% if current_user.profile_image %}
+          <img class="nav-avatar" src="{{ url_for('static', filename='uploads/' ~ current_user.profile_image) }}" alt="">
+        {% else %}
+          <span class="nav-avatar nav-avatar-fallback">{{ current_user.display_label[:1]|upper }}</span>
+        {% endif %}
+      </a>
     </header>
 
     <nav class="direct-tabs" aria-label="Direct tabs">
-      <a class="direct-tab" href="{{ url_for('chat.index') }}">
-        <span dir="rtl">الخاص</span>
-        <span class="badge private-badge{% if not inbox.private_unread_count %} is-hidden{% endif %}" data-private-badge>
-          {{ inbox.private_unread_count }}
-        </span>
-      </a>
       <a class="direct-tab active" href="{{ url_for('chat.message_requests') }}">
         <span dir="rtl">طلبات المراسلة</span>
         <span class="badge request-badge{% if not inbox.request_count %} is-hidden{% endif %}" data-request-badge>
           {{ inbox.request_count }}
         </span>
       </a>
+      <a class="direct-tab" href="{{ url_for('chat.index') }}">
+        <span dir="rtl">الخاص</span>
+        <span class="badge private-badge{% if not inbox.private_unread_count %} is-hidden{% endif %}" data-private-badge>
+          {{ inbox.private_unread_count }}
+        </span>
+      </a>
     </nav>
 
     <div class="direct-section">
-      <h2>Pending requests</h2>
       <div class="conversation-list" data-requests-list>
         {% if inbox.requests %}
           {% for conversation in inbox.requests %}
@@ -56,5 +64,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/direct.js', v='1.2') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/direct.js', v='2.0') }}" defer></script>
 {% endblock %}

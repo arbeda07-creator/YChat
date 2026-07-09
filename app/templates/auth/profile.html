@@ -4,30 +4,40 @@
 
 {% block content %}
   <section class="profile-panel">
-    <div class="profile-preview">
-      {% if current_user.profile_image %}
-        <img class="avatar avatar-large" src="{{ url_for('static', filename='uploads/' ~ current_user.profile_image) }}" alt="">
-      {% else %}
-        <span class="avatar avatar-large">{{ current_user.username[:1]|upper }}</span>
-      {% endif %}
+    <header class="profile-heading">
+      <button class="icon-button" type="button" aria-label="Menu">☰</button>
+      <h1>YChat 2.0</h1>
+      <a class="profile-chip" href="{{ url_for('chat.index') }}">Direct</a>
+    </header>
+
+    <h2 class="panel-title" dir="rtl">الملف الشخصي</h2>
+
+    <div class="profile-grid">
+      <div class="profile-preview">
+        {% if current_user.profile_image %}
+          <img class="avatar avatar-large" src="{{ url_for('static', filename='uploads/' ~ current_user.profile_image) }}" alt="">
+        {% else %}
+          <span class="avatar avatar-large">{{ current_user.username[:1]|upper }}</span>
+        {% endif %}
+        <strong>{{ current_user.display_label }}</strong>
+        <span>@{{ current_user.username }}</span>
+        <small>{{ current_user.bio or "متصل" }}</small>
+      </div>
+
       <div>
-        <span class="eyebrow">Your Profile</span>
-        <h1>{{ current_user.display_label }}</h1>
-        <p>{{ current_user.bio or "Add a short status so friends know what's up." }}</p>
+        <form class="form profile-form" method="post" enctype="multipart/form-data">
+          <label for="display_name">Display name</label>
+          <input id="display_name" name="display_name" maxlength="120" value="{{ current_user.display_name or '' }}" placeholder="{{ current_user.username }}">
+
+          <label for="bio">Bio / status</label>
+          <textarea id="bio" name="bio" rows="3" maxlength="280" placeholder="Write a short status...">{{ current_user.bio or '' }}</textarea>
+
+          <label for="profile_image">Profile picture</label>
+          <input id="profile_image" name="profile_image" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+
+          <button class="button button-primary" type="submit">Save changes</button>
+        </form>
       </div>
     </div>
-
-    <form class="form" method="post" enctype="multipart/form-data">
-      <label for="display_name">Display name</label>
-      <input id="display_name" name="display_name" maxlength="120" value="{{ current_user.display_name or '' }}" placeholder="{{ current_user.username }}">
-
-      <label for="bio">Bio / status</label>
-      <textarea id="bio" name="bio" rows="3" maxlength="280" placeholder="Write a short status...">{{ current_user.bio or '' }}</textarea>
-
-      <label for="profile_image">Profile picture</label>
-      <input id="profile_image" name="profile_image" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
-
-      <button class="button button-primary" type="submit">Save profile</button>
-    </form>
   </section>
 {% endblock %}

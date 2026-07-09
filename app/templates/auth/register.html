@@ -1,25 +1,38 @@
 {% extends "base.html" %}
 
 {% block title %}Register - YChat 2.0{% endblock %}
+{% block body_class %}auth-page{% endblock %}
 
 {% block content %}
-  <section class="auth-panel">
-    <h1>Create your account</h1>
-    <p>Choose a username and a strong password.</p>
+  <section class="auth-hero">
+    <div class="auth-welcome">
+      <div class="brand-mark">Y</div>
+      <h1>انضم إلى YChat</h1>
+      <p>أنشئ حسابك وابدأ محادثاتك الخاصة</p>
+      <div class="chat-illustration" aria-hidden="true">
+        <span></span>
+        <span></span>
+      </div>
+    </div>
 
-    <form class="form" method="post">
-      <label for="username">Username</label>
-      <input id="username" name="username" autocomplete="username" minlength="3" required>
+    <form class="auth-card form" method="post">
+      <div class="form-heading" dir="rtl">
+        <h2>إنشاء حساب</h2>
+        <p>اختر اسم مستخدم وكلمة مرور قوية</p>
+      </div>
 
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="username">اسم المستخدم</label>
+      <input id="username" name="username" autocomplete="username" minlength="3" placeholder="اسم المستخدم" required>
 
-      <label for="confirm_password">Confirm password</label>
-      <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="password">كلمة المرور</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="كلمة المرور" required>
 
-      <button class="button button-primary" type="submit">Register</button>
+      <label for="confirm_password">تأكيد كلمة المرور</label>
+      <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" placeholder="تأكيد كلمة المرور" required>
+
+      <button class="button button-primary" type="submit">تسجيل</button>
+
+      <p class="muted centered">لديك حساب؟ <a href="{{ url_for('auth.login') }}">تسجيل الدخول</a></p>
     </form>
-
-    <p class="muted">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>.</p>
   </section>
 {% endblock %}
