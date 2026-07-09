@@ -8,7 +8,7 @@
       <div>
         <span class="eyebrow">YChat Version 2</span>
         <h1>Team Chat</h1>
-        <p>Live messages for everyone in the room.</p>
+        <p>Messages update automatically every two seconds.</p>
       </div>
       <span class="connection-status" id="connection-status" role="status">
         <span class="status-dot"></span>
@@ -38,5 +38,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/chat.js', v='2.2') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/chat.js', v='2.3') }}" defer></script>
 {% endblock %}
