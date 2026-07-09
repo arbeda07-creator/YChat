@@ -22,6 +22,19 @@ let recordedChunks = [];
 let recordingTimeout = null;
 let lastRenderedSignature = "";
 
+function withCacheBust(path) {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}_=${Date.now()}`;
+}
+
+function replaceTrailingMessageId(path, messageId, suffix = "") {
+  const ending = suffix ? `/0/${suffix}` : "/0";
+  const replacement = suffix ? `/${messageId}/${suffix}` : `/${messageId}`;
+  return path.endsWith(ending)
+    ? `${path.slice(0, -ending.length)}${replacement}`
+    : path;
+}
+
 function formatTime(isoTime) {
   const date = new Date(isoTime);
   if (Number.isNaN(date.getTime())) return isoTime;
@@ -251,9 +264,7 @@ async function refreshMessages() {
   refreshInProgress = true;
 
   try {
-    const url = new URL(messagesElement.dataset.messagesUrl, window.location.origin);
-    url.searchParams.set("_", Date.now());
-    const response = await fetch(url, {
+    const response = await fetch(withCacheBust(messagesElement.dataset.messagesUrl), {
       headers: { Accept: "application/json" },
       cache: "no-store",
       credentials: "same-origin",
@@ -338,8 +349,11 @@ async function sendMessage({ voiceBlob } = {}) {
 }
 
 async function sendReaction(messageId, emoji) {
-  const url = new URL(messagesElement.dataset.reactionUrlTemplate, window.location.origin);
-  url.pathname = url.pathname.replace(/\/0\/reaction$/, `/${messageId}/reaction`);
+  const url = replaceTrailingMessageId(
+    messagesElement.dataset.reactionUrlTemplate,
+    messageId,
+    "reaction"
+  );
 
   const response = await fetch(url, {
     method: "POST",
@@ -461,8 +475,10 @@ messagesElement.addEventListener("click", async (event) => {
   }
 
   if (deleteButton) {
-    const url = new URL(messagesElement.dataset.deleteMessageUrlTemplate, window.location.origin);
-    url.pathname = url.pathname.replace(/\/0$/, `/${deleteButton.dataset.deleteMessageId}`);
+    const url = replaceTrailingMessageId(
+      messagesElement.dataset.deleteMessageUrlTemplate,
+      deleteButton.dataset.deleteMessageId
+    );
     deleteButton.disabled = true;
 
     try {

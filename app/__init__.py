@@ -56,7 +56,7 @@ def _register_security_hooks(app):
     @app.before_request
     def redirect_to_https():
         if _should_force_https(app) and not request.is_secure:
-            return redirect(request.url.replace("http://", "https://", 1), code=308)
+            return redirect(request.url.replace(f"{request.scheme}://", "https://", 1), code=308)
         return None
 
     @app.after_request
