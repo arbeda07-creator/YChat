@@ -5,7 +5,7 @@
 {% block content %}
   <section class="chat-layout">
     <div class="chat-header">
-      <a class="icon-button back-button" href="{{ url_for('chat.index') }}" aria-label="Back">‹</a>
+      <a class="icon-button back-button" href="{{ url_for('chat.index') }}" aria-label="Back">&lsaquo;</a>
       <div class="chat-title-row">
         {% if other_user.profile_image %}
           <img class="avatar" src="{{ url_for('static', filename='uploads/' ~ other_user.profile_image) }}" alt="">
@@ -28,7 +28,7 @@
         data-delete-chat-url="{{ url_for('chat.delete_private_conversation_api', username=other_user.username) }}"
         aria-label="Delete chat"
       >
-        ⋮
+        &vellip;
       </button>
       <span class="connection-status" id="connection-status" role="status" hidden>
         <span class="status-dot"></span>
@@ -45,19 +45,39 @@
       data-messages-url="{{ url_for('chat.private_messages_api', username=other_user.username) }}"
       data-send-url="{{ url_for('chat.send_private_api', username=other_user.username) }}"
       data-delete-message-url-template="{{ url_for('chat.delete_private_message_api', username=other_user.username, message_id=0) }}"
+      data-reaction-url-template="{{ url_for('chat.react_private_message_api', username=other_user.username, message_id=0) }}"
     >
       <div class="empty-state">Loading messages...</div>
     </div>
 
     <form class="composer" id="composer">
+      <div class="reply-preview is-hidden" id="reply-preview">
+        <span>
+          <strong id="reply-name">Reply</strong>
+          <small id="reply-text"></small>
+        </span>
+        <button class="icon-button reply-cancel" id="reply-cancel" type="button" aria-label="Cancel reply">&times;</button>
+      </div>
+      <div class="recording-bar is-hidden" id="recording-bar">
+        <span class="recording-dot"></span>
+        <span id="recording-label">Recording voice message...</span>
+        <button class="button button-ghost" id="recording-stop" type="button">Stop</button>
+      </div>
+      <button class="icon-button voice-button" id="voice-button" type="button" aria-label="Record voice message">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"></path>
+          <path d="M19 11a7 7 0 0 1-14 0"></path>
+          <path d="M12 18v3"></path>
+        </svg>
+      </button>
       <label class="sr-only" for="body">Message</label>
-      <textarea id="body" name="body" rows="2" maxlength="2000" placeholder="Write a private message..." required></textarea>
-      <button class="button button-primary send-button" type="submit" aria-label="Send">➤</button>
+      <textarea id="body" name="body" rows="2" maxlength="2000" placeholder="Write a private message..."></textarea>
+      <button class="button button-primary send-button" type="submit" aria-label="Send">&rarr;</button>
       <p class="composer-error" id="composer-error" role="alert"></p>
     </form>
   </section>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/chat.js', v='3.0') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/chat.js', v='4.0') }}" defer></script>
 {% endblock %}

@@ -1,9 +1,12 @@
 import json
+from pathlib import Path
+from uuid import uuid4
 
 from flask import (
     Blueprint,
     Response,
     abort,
+    current_app,
     jsonify,
     render_template,
     request,
@@ -11,6 +14,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
 
 from app.chat.storage import (
     accept_message_request,
@@ -24,12 +28,23 @@ from app.chat.storage import (
     reject_message_request,
     save_message,
     save_private_message,
+    set_private_reaction,
     wait_for_messages_after,
 )
 from app.models import User
 
 
 chat_bp = Blueprint("chat", __name__)
+ALLOWED_REACTIONS = {"❤️", "😂", "👍", "😮", "😢", "🔥"}
+ALLOWED_AUDIO_MIME_TYPES = {
+    "audio/webm": "webm",
+    "audio/ogg": "ogg",
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/mp4": "m4a",
+}
 
 
 @chat_bp.route("/")
@@ -73,9 +88,47 @@ def _search_users(query):
     )
 
 
-def _message_payload(message, user_cards=None):
+def _reaction_payload(reactions):
+    grouped = {}
+    for emoji in reactions.values():
+        grouped[emoji] = grouped.get(emoji, 0) + 1
+    return [
+        {"emoji": emoji, "count": count}
+        for emoji, count in grouped.items()
+    ]
+
+
+def _reply_payload(message, messages_by_id, user_cards):
+    reply_to = message.get("reply_to")
+    if not reply_to:
+        return None
+
+    original = messages_by_id.get(int(reply_to))
+    if not original:
+        return {
+            "id": reply_to,
+            "deleted": True,
+            "display_name": "Deleted message",
+            "message": "",
+            "message_type": "deleted",
+        }
+
+    sender = user_cards.get(original["sender"]) or _user_card(original["sender"])
+    return {
+        "id": original["id"],
+        "deleted": False,
+        "username": original["sender"],
+        "display_name": sender["display_name"],
+        "message": original.get("message") or "Voice message",
+        "message_type": original.get("message_type", "text"),
+    }
+
+
+def _message_payload(message, user_cards=None, messages_by_id=None):
     user_cards = user_cards or {}
+    messages_by_id = messages_by_id or {}
     sender = user_cards.get(message["sender"]) or _user_card(message["sender"])
+    reactions = message.get("reactions", {})
     return {
         "id": message["id"],
         "username": message["sender"],
@@ -84,13 +137,20 @@ def _message_payload(message, user_cards=None):
         "initial": sender["initial"],
         "receiver": message["receiver"],
         "time": message["time"],
-        "message": message["message"],
+        "message": message.get("message", ""),
+        "message_type": message.get("message_type", "text"),
+        "audio_url": message.get("audio", {}).get("url") if message.get("audio") else None,
+        "audio_name": message.get("audio", {}).get("filename") if message.get("audio") else None,
+        "reply": _reply_payload(message, messages_by_id, user_cards),
+        "reactions": _reaction_payload(reactions),
+        "my_reaction": reactions.get(current_user.username),
     }
 
 
 def _message_payloads(messages, *usernames):
     user_cards = {username: _user_card(username) for username in usernames}
-    return [_message_payload(message, user_cards) for message in messages]
+    messages_by_id = {int(message.get("id", 0)): message for message in messages}
+    return [_message_payload(message, user_cards, messages_by_id) for message in messages]
 
 
 def _user_card(username):
@@ -113,6 +173,35 @@ def _enrich_inbox(inbox):
         for conversation in inbox[collection_name]:
             conversation.update(_user_card(conversation["username"]))
     return inbox
+
+
+def _save_voice_upload(file_storage):
+    content_type = (file_storage.mimetype or "").split(";")[0].lower()
+    extension = ALLOWED_AUDIO_MIME_TYPES.get(content_type)
+    if not extension:
+        return None, "Please upload a valid audio recording."
+
+    file_storage.stream.seek(0, 2)
+    size = file_storage.stream.tell()
+    file_storage.stream.seek(0)
+    if size <= 0:
+        return None, "Voice message is empty."
+    if size > 2 * 1024 * 1024:
+        return None, "Voice message is too large."
+
+    upload_root = Path(current_app.config["UPLOAD_FOLDER"])
+    voice_dir = upload_root / "voice"
+    voice_dir.mkdir(parents=True, exist_ok=True)
+    original = secure_filename(file_storage.filename or f"voice.{extension}")
+    filename = f"voice-{current_user.id}-{uuid4().hex}.{extension}"
+    file_storage.save(voice_dir / filename)
+    return {
+        "filename": filename,
+        "original_name": original,
+        "content_type": content_type,
+        "size": size,
+        "url": url_for("static", filename=f"uploads/voice/{filename}"),
+    }, None
 
 
 @chat_bp.get("/users")
@@ -184,19 +273,61 @@ def send_private_api(username):
     if other_user.id == current_user.id:
         return abort(404)
 
-    payload = request.get_json(silent=True) or request.form
-    body = str(payload.get("message", "")).strip()
+    if request.content_type and request.content_type.startswith("multipart/form-data"):
+        payload = request.form
+    else:
+        payload = request.get_json(silent=True) or request.form
 
-    if not body:
+    body = str(payload.get("message", "")).strip()
+    reply_to = payload.get("reply_to") or None
+    audio = None
+    audio_file = request.files.get("voice")
+
+    if audio_file and audio_file.filename:
+        audio, error = _save_voice_upload(audio_file)
+        if error:
+            return jsonify({"error": error}), 400
+
+    if not body and not audio:
         return jsonify({"error": "Message cannot be empty."}), 400
     if len(body) > 2000:
         return jsonify({"error": "Message is too long."}), 400
 
-    message = save_private_message(current_user.username, other_user.username, body)
+    message = save_private_message(
+        current_user.username,
+        other_user.username,
+        body,
+        reply_to=reply_to,
+        audio=audio,
+    )
     if not message:
         return jsonify({"error": "This message request was rejected."}), 403
 
     return jsonify({"message": _message_payload(message)}), 201
+
+
+@chat_bp.post("/api/dm/<username>/messages/<int:message_id>/reaction")
+@login_required
+def react_private_message_api(username, message_id):
+    other_user = User.query.filter_by(username=username).first_or_404()
+    if other_user.id == current_user.id:
+        return abort(404)
+
+    payload = request.get_json(silent=True) or request.form
+    emoji = str(payload.get("emoji", "")).strip()
+    if emoji not in ALLOWED_REACTIONS:
+        return jsonify({"error": "Reaction is not allowed."}), 400
+
+    message = set_private_reaction(
+        current_user.username,
+        other_user.username,
+        message_id,
+        emoji,
+    )
+    if not message:
+        return jsonify({"error": "Message was not found."}), 404
+
+    return jsonify({"message": _message_payload(message)})
 
 
 @chat_bp.delete("/api/dm/<username>/messages/<int:message_id>")

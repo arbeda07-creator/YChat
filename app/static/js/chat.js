@@ -5,9 +5,22 @@ const sendButton = composer.querySelector("button[type='submit']");
 const errorElement = document.querySelector("#composer-error");
 const statusElement = document.querySelector("#connection-status");
 const deleteChatButton = document.querySelector("[data-delete-chat-url]");
+const replyPreview = document.querySelector("#reply-preview");
+const replyName = document.querySelector("#reply-name");
+const replyText = document.querySelector("#reply-text");
+const replyCancel = document.querySelector("#reply-cancel");
+const voiceButton = document.querySelector("#voice-button");
+const recordingBar = document.querySelector("#recording-bar");
+const recordingStop = document.querySelector("#recording-stop");
+const recordingLabel = document.querySelector("#recording-label");
 
+const reactionEmojis = ["❤️", "😂", "👍", "😮", "😢", "🔥"];
 let refreshInProgress = false;
-const seenMessageIds = new Set();
+let currentReply = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordingTimeout = null;
+let lastRenderedSignature = "";
 
 function formatTime(isoTime) {
   const date = new Date(isoTime);
@@ -19,14 +32,17 @@ function formatTime(isoTime) {
   }).format(date);
 }
 
-function createMessageElement(item) {
-  const article = document.createElement("article");
-  article.className = "message";
-  article.dataset.messageId = item.id;
-  if (item.username === messagesElement.dataset.currentUser) {
-    article.classList.add("message-own");
-  }
+function setError(message) {
+  errorElement.textContent = message || "";
+}
 
+function messageSummary(item) {
+  if (item.message) return item.message;
+  if (item.message_type === "voice") return "Voice message";
+  return "Message";
+}
+
+function createAvatar(item) {
   const avatar = document.createElement(item.avatar_url ? "img" : "span");
   avatar.className = "message-avatar";
   if (item.avatar_url) {
@@ -34,6 +50,111 @@ function createMessageElement(item) {
     avatar.alt = "";
   } else {
     avatar.textContent = item.initial || item.username.slice(0, 1).toUpperCase();
+  }
+  return avatar;
+}
+
+function createReplyQuote(reply) {
+  const quote = document.createElement("button");
+  quote.className = "message-reply-quote";
+  quote.type = "button";
+  quote.dataset.scrollToMessage = reply.id;
+
+  const name = document.createElement("strong");
+  name.textContent = reply.display_name || "Reply";
+
+  const text = document.createElement("span");
+  text.textContent = reply.deleted ? "Deleted message" : reply.message;
+
+  quote.append(name, text);
+  return quote;
+}
+
+function createAudioPlayer(item) {
+  const wrap = document.createElement("div");
+  wrap.className = "voice-player";
+
+  const audio = document.createElement("audio");
+  audio.controls = true;
+  audio.preload = "metadata";
+  audio.src = item.audio_url;
+
+  wrap.append(audio);
+  return wrap;
+}
+
+function createReactions(item) {
+  const wrap = document.createElement("div");
+  wrap.className = "message-reactions";
+
+  (item.reactions || []).forEach((reaction) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "reaction-pill";
+    if (item.my_reaction === reaction.emoji) button.classList.add("active");
+    button.dataset.reaction = reaction.emoji;
+    button.dataset.messageId = item.id;
+    button.textContent = `${reaction.emoji} ${reaction.count}`;
+    wrap.append(button);
+  });
+
+  return wrap;
+}
+
+function createActions(item) {
+  const actions = document.createElement("div");
+  actions.className = "message-actions";
+
+  const replyButton = document.createElement("button");
+  replyButton.type = "button";
+  replyButton.dataset.replyMessageId = item.id;
+  replyButton.textContent = "Reply";
+
+  const reactionButton = document.createElement("button");
+  reactionButton.type = "button";
+  reactionButton.dataset.openReactions = item.id;
+  reactionButton.textContent = "React";
+
+  actions.append(replyButton, reactionButton);
+
+  if (messagesElement.dataset.deleteMessageUrlTemplate) {
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "message-delete";
+    deleteButton.dataset.deleteMessageId = item.id;
+    deleteButton.textContent = "Delete";
+    actions.append(deleteButton);
+  }
+
+  return actions;
+}
+
+function createReactionPicker(item) {
+  const picker = document.createElement("div");
+  picker.className = "reaction-picker is-hidden";
+  picker.dataset.reactionPickerFor = item.id;
+
+  reactionEmojis.forEach((emoji) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.reaction = emoji;
+    button.dataset.messageId = item.id;
+    button.className = item.my_reaction === emoji ? "active" : "";
+    button.textContent = emoji;
+    picker.append(button);
+  });
+
+  return picker;
+}
+
+function createMessageElement(item) {
+  const article = document.createElement("article");
+  article.className = "message";
+  article.dataset.messageId = item.id;
+  article.dataset.replyName = item.display_name || item.username;
+  article.dataset.replyText = messageSummary(item);
+  if (item.username === messagesElement.dataset.currentUser) {
+    article.classList.add("message-own");
   }
 
   const meta = document.createElement("div");
@@ -46,20 +167,24 @@ function createMessageElement(item) {
   time.dateTime = item.time;
   time.textContent = formatTime(item.time);
 
-  const message = document.createElement("p");
-  message.textContent = item.message;
-
-  const deleteButton = document.createElement("button");
-  deleteButton.className = "message-delete";
-  deleteButton.type = "button";
-  deleteButton.dataset.messageId = item.id;
-  deleteButton.textContent = "Delete";
-
   meta.append(username, time);
-  article.append(avatar, meta, message);
-  if (messagesElement.dataset.deleteMessageUrlTemplate) {
-    article.append(deleteButton);
+  article.append(createAvatar(item), meta);
+
+  if (item.reply) {
+    article.append(createReplyQuote(item.reply));
   }
+
+  if (item.message) {
+    const message = document.createElement("p");
+    message.textContent = item.message;
+    article.append(message);
+  }
+
+  if (item.audio_url) {
+    article.append(createAudioPlayer(item));
+  }
+
+  article.append(createReactions(item), createActions(item), createReactionPicker(item));
   return article;
 }
 
@@ -76,44 +201,44 @@ function visibleConversationMessages(messages) {
   });
 }
 
-function syncRemovedMessages(messages) {
-  const visibleIds = new Set(messages.map((item) => String(item.id)));
-  messagesElement.querySelectorAll("[data-message-id]").forEach((element) => {
-    if (!visibleIds.has(element.dataset.messageId)) {
-      element.remove();
-    }
-  });
+function renderMessages(messages) {
+  const visibleMessages = visibleConversationMessages(messages);
+  const signature = JSON.stringify(visibleMessages.map((item) => ({
+    id: item.id,
+    message: item.message,
+    type: item.message_type,
+    audio: item.audio_url,
+    reply: item.reply?.id || null,
+    reactions: item.reactions,
+    mine: item.my_reaction,
+  })));
+
+  if (signature === lastRenderedSignature) return;
+  lastRenderedSignature = signature;
+
+  const shouldStickToBottom =
+    messagesElement.scrollHeight - messagesElement.scrollTop - messagesElement.clientHeight < 90;
+  messagesElement.replaceChildren();
+
+  if (visibleMessages.length === 0) {
+    showEmptyState();
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  visibleMessages.forEach((item) => fragment.append(createMessageElement(item)));
+  messagesElement.append(fragment);
+
+  if (shouldStickToBottom) {
+    messagesElement.scrollTop = messagesElement.scrollHeight;
+  }
 }
 
 function showEmptyState() {
-  if (messagesElement.querySelector(".empty-state")) return;
-
   const emptyState = document.createElement("div");
   emptyState.className = "empty-state";
   emptyState.textContent = "No messages yet. Start the conversation.";
   messagesElement.append(emptyState);
-}
-
-function appendNewMessages(messages) {
-  const visibleMessages = visibleConversationMessages(messages);
-  syncRemovedMessages(visibleMessages);
-  const newMessages = visibleMessages.filter((item) => !seenMessageIds.has(String(item.id)));
-
-  if (newMessages.length === 0) {
-    if (visibleMessages.length === 0) showEmptyState();
-    return;
-  }
-
-  messagesElement.querySelector(".empty-state")?.remove();
-  const fragment = document.createDocumentFragment();
-
-  newMessages.forEach((item) => {
-    seenMessageIds.add(String(item.id));
-    fragment.append(createMessageElement(item));
-  });
-
-  messagesElement.append(fragment);
-  messagesElement.scrollTop = messagesElement.scrollHeight;
 }
 
 function setConnectionStatus(isLive, label) {
@@ -136,7 +261,7 @@ async function refreshMessages() {
     if (!response.ok) throw new Error("Could not refresh messages.");
 
     const data = await response.json();
-    appendNewMessages(data.messages);
+    renderMessages(data.messages);
     setConnectionStatus(true, "Live");
   } catch (error) {
     setConnectionStatus(false, "Reconnecting");
@@ -145,34 +270,139 @@ async function refreshMessages() {
   }
 }
 
-composer.addEventListener("submit", async (event) => {
-  event.preventDefault();
+function setReply(item) {
+  currentReply = item;
+  replyName.textContent = item.name;
+  replyText.textContent = item.text;
+  replyPreview.classList.remove("is-hidden");
+  bodyInput.focus();
+}
+
+function clearReply() {
+  currentReply = null;
+  replyPreview.classList.add("is-hidden");
+  replyName.textContent = "Reply";
+  replyText.textContent = "";
+}
+
+async function sendMessage({ voiceBlob } = {}) {
   const message = bodyInput.value.trim();
-  if (!message) return;
+  if (!message && !voiceBlob) return;
 
   sendButton.disabled = true;
-  errorElement.textContent = "";
+  voiceButton.disabled = true;
+  setError("");
 
   try {
-    const response = await fetch(messagesElement.dataset.sendUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ message }),
-    });
+    let response;
+    if (voiceBlob) {
+      const formData = new FormData();
+      formData.append("message", message);
+      formData.append("voice", voiceBlob, "voice-message.webm");
+      if (currentReply) formData.append("reply_to", currentReply.id);
+
+      response = await fetch(messagesElement.dataset.sendUrl, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+    } else {
+      response = await fetch(messagesElement.dataset.sendUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          message,
+          reply_to: currentReply ? currentReply.id : null,
+        }),
+      });
+    }
+
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Message could not be sent.");
 
     bodyInput.value = "";
+    clearReply();
     await refreshMessages();
     bodyInput.focus();
   } catch (error) {
-    errorElement.textContent = error.message;
+    setError(error.message);
   } finally {
     sendButton.disabled = false;
+    voiceButton.disabled = false;
   }
+}
+
+async function sendReaction(messageId, emoji) {
+  const url = new URL(messagesElement.dataset.reactionUrlTemplate, window.location.origin);
+  url.pathname = url.pathname.replace(/\/0\/reaction$/, `/${messageId}/reaction`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    credentials: "same-origin",
+    body: JSON.stringify({ emoji }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Reaction could not be saved.");
+  await refreshMessages();
+}
+
+async function startRecording() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    setError("Voice recording is not supported in this browser.");
+    return;
+  }
+
+  setError("");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordedChunks = [];
+    const options = MediaRecorder.isTypeSupported?.("audio/webm")
+      ? { mimeType: "audio/webm" }
+      : {};
+    mediaRecorder = new MediaRecorder(stream, options);
+    mediaRecorder.addEventListener("dataavailable", (event) => {
+      if (event.data.size > 0) recordedChunks.push(event.data);
+    });
+    mediaRecorder.addEventListener("stop", async () => {
+      window.clearTimeout(recordingTimeout);
+      stream.getTracks().forEach((track) => track.stop());
+      recordingBar.classList.add("is-hidden");
+      voiceButton.disabled = false;
+
+      const voiceType = mediaRecorder.mimeType || "audio/webm";
+      const voiceBlob = new Blob(recordedChunks, { type: voiceType });
+      recordedChunks = [];
+      if (voiceBlob.size > 2 * 1024 * 1024) {
+        setError("Voice message is too large.");
+        return;
+      }
+      await sendMessage({ voiceBlob });
+    });
+
+    mediaRecorder.start();
+    voiceButton.disabled = true;
+    recordingBar.classList.remove("is-hidden");
+    recordingLabel.textContent = "Recording voice message...";
+    recordingTimeout = window.setTimeout(() => {
+      if (mediaRecorder?.state === "recording") mediaRecorder.stop();
+    }, 60000);
+  } catch (error) {
+    setError("Microphone permission was not granted.");
+  }
+}
+
+composer.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await sendMessage();
 });
 
 bodyInput.addEventListener("keydown", (event) => {
@@ -182,26 +412,82 @@ bodyInput.addEventListener("keydown", (event) => {
   }
 });
 
+replyCancel.addEventListener("click", clearReply);
+
+voiceButton.addEventListener("click", startRecording);
+
+recordingStop.addEventListener("click", () => {
+  if (mediaRecorder?.state === "recording") {
+    recordingLabel.textContent = "Saving voice message...";
+    mediaRecorder.stop();
+  }
+});
+
 messagesElement.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-message-id]");
-  if (!button || !button.classList.contains("message-delete")) return;
+  const replyButton = event.target.closest("[data-reply-message-id]");
+  const openReactions = event.target.closest("[data-open-reactions]");
+  const reactionButton = event.target.closest("[data-reaction]");
+  const deleteButton = event.target.closest("[data-delete-message-id]");
+  const quoteButton = event.target.closest("[data-scroll-to-message]");
 
-  const url = new URL(messagesElement.dataset.deleteMessageUrlTemplate, window.location.origin);
-  url.pathname = url.pathname.replace(/\/0$/, `/${button.dataset.messageId}`);
-  button.disabled = true;
-
-  try {
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers: { Accept: "application/json" },
-      credentials: "same-origin",
+  if (replyButton) {
+    const message = replyButton.closest(".message");
+    setReply({
+      id: replyButton.dataset.replyMessageId,
+      name: message.dataset.replyName,
+      text: message.dataset.replyText,
     });
-    if (!response.ok) throw new Error("Message could not be deleted.");
-    button.closest(".message")?.remove();
-    await refreshMessages();
-  } catch (error) {
-    button.disabled = false;
-    errorElement.textContent = error.message;
+    return;
+  }
+
+  if (openReactions) {
+    const picker = messagesElement.querySelector(
+      `[data-reaction-picker-for="${openReactions.dataset.openReactions}"]`
+    );
+    messagesElement.querySelectorAll(".reaction-picker").forEach((element) => {
+      if (element !== picker) element.classList.add("is-hidden");
+    });
+    picker?.classList.toggle("is-hidden");
+    return;
+  }
+
+  if (reactionButton) {
+    try {
+      await sendReaction(reactionButton.dataset.messageId, reactionButton.dataset.reaction);
+    } catch (error) {
+      setError(error.message);
+    }
+    return;
+  }
+
+  if (deleteButton) {
+    const url = new URL(messagesElement.dataset.deleteMessageUrlTemplate, window.location.origin);
+    url.pathname = url.pathname.replace(/\/0$/, `/${deleteButton.dataset.deleteMessageId}`);
+    deleteButton.disabled = true;
+
+    try {
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("Message could not be deleted.");
+      lastRenderedSignature = "";
+      await refreshMessages();
+    } catch (error) {
+      deleteButton.disabled = false;
+      setError(error.message);
+    }
+    return;
+  }
+
+  if (quoteButton) {
+    const target = messagesElement.querySelector(
+      `[data-message-id="${quoteButton.dataset.scrollToMessage}"]`
+    );
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.classList.add("message-highlight");
+    window.setTimeout(() => target?.classList.remove("message-highlight"), 1000);
   }
 });
 
@@ -220,7 +506,7 @@ deleteChatButton?.addEventListener("click", async () => {
     window.location.href = data.redirect || "/";
   } catch (error) {
     deleteChatButton.disabled = false;
-    errorElement.textContent = error.message;
+    setError(error.message);
   }
 });
 

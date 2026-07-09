@@ -70,6 +70,10 @@ def _private_messages():
         record.setdefault("status", "accepted")
         record.setdefault("requested_by", record.get("sender"))
         record.setdefault("read_by", [record.get("sender")])
+        record.setdefault("message_type", "text")
+        record.setdefault("reply_to", None)
+        record.setdefault("reactions", {})
+        record.setdefault("audio", None)
     return records
 
 
@@ -215,7 +219,22 @@ def mark_private_messages_read(username, other_username):
     return changed
 
 
-def save_private_message(sender, receiver, body):
+def _find_conversation_message(messages, username_a, username_b, message_id):
+    try:
+        target_id = int(message_id)
+    except (TypeError, ValueError):
+        return None
+
+    for message in messages:
+        if (
+            int(message.get("id", 0)) == target_id
+            and _conversation_matches(message, username_a, username_b)
+        ):
+            return message
+    return None
+
+
+def save_private_message(sender, receiver, body, reply_to=None, audio=None):
     path = _private_messages_path()
 
     with _file_lock:
@@ -226,12 +245,17 @@ def save_private_message(sender, receiver, body):
         status = "accepted" if any(
             message.get("status") == "accepted" for message in current_records
         ) else "pending"
+        reply_message = _find_conversation_message(messages, sender, receiver, reply_to)
         message = {
             "id": max((item.get("id", 0) for item in messages), default=0) + 1,
             "sender": sender,
             "receiver": receiver,
             "time": datetime.now(timezone.utc).isoformat(),
             "message": body,
+            "message_type": "voice" if audio else "text",
+            "audio": audio,
+            "reply_to": reply_message.get("id") if reply_message else None,
+            "reactions": {},
             "status": status,
             "requested_by": current_records[0].get("requested_by", sender)
             if current_records
@@ -242,6 +266,25 @@ def save_private_message(sender, receiver, body):
         _write_private_messages(path, messages)
 
     return message
+
+
+def set_private_reaction(username, other_username, message_id, emoji):
+    path = _private_messages_path()
+
+    with _file_lock:
+        messages = _private_messages()
+        message = _find_conversation_message(messages, username, other_username, message_id)
+        if not message or message.get("status") != "accepted":
+            return None
+
+        reactions = message.setdefault("reactions", {})
+        if reactions.get(username) == emoji:
+            reactions.pop(username, None)
+        else:
+            reactions[username] = emoji
+
+        _write_private_messages(path, messages)
+        return message
 
 
 def accept_message_request(receiver, requester):
