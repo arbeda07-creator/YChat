@@ -1,42 +1,83 @@
 {% extends "base.html" %}
 
-{% block title %}Chat - YChat 2.0{% endblock %}
+{% block title %}Direct - YChat 2.0{% endblock %}
 
 {% block content %}
-  <section class="chat-layout">
-    <div class="chat-header">
+  <section class="direct-shell" data-summary-url="{{ url_for('chat.private_summary_api') }}">
+    <header class="direct-header">
       <div>
-        <span class="eyebrow">YChat Version 2</span>
-        <h1>Team Chat</h1>
-        <p>Messages update automatically every two seconds.</p>
+        <span class="eyebrow">YChat Direct</span>
+        <h1>الخاص</h1>
       </div>
-      <span class="connection-status" id="connection-status" role="status">
-        <span class="status-dot"></span>
-        Live
-      </span>
-    </div>
+      <a class="compose-link" href="#user-search" aria-label="Search users">+</a>
+    </header>
 
-    <div
-      class="messages"
-      id="messages"
-      aria-live="polite"
-      data-current-user="{{ current_user.username }}"
-      data-messages-url="{{ url_for('chat.messages_api') }}"
-      data-stream-url="{{ url_for('chat.messages_stream_api') }}"
-      data-send-url="{{ url_for('chat.send_api') }}"
-    >
-      <div class="empty-state">Loading messages…</div>
-    </div>
+    <nav class="direct-tabs" aria-label="Direct tabs">
+      <a class="direct-tab active" href="{{ url_for('chat.index') }}">
+        الخاص
+        <span class="badge private-badge{% if not inbox.private_unread_count %} is-hidden{% endif %}" data-private-badge>
+          {{ inbox.private_unread_count }}
+        </span>
+      </a>
+      <a class="direct-tab" href="{{ url_for('chat.message_requests') }}">
+        طلبات المراسلة
+        <span class="badge request-badge{% if not inbox.request_count %} is-hidden{% endif %}" data-request-badge>
+          {{ inbox.request_count }}
+        </span>
+      </a>
+    </nav>
 
-    <form class="composer" id="composer">
-      <label class="sr-only" for="body">Message</label>
-      <textarea id="body" name="body" rows="2" maxlength="2000" placeholder="Write a message…" required></textarea>
-      <button class="button button-primary send-button" type="submit">Send</button>
-      <p class="composer-error" id="composer-error" role="alert"></p>
+    <form class="direct-search" id="user-search" method="get">
+      <input name="q" value="{{ query }}" placeholder="Search users..." autocomplete="off">
+      <button class="button button-primary" type="submit">Search</button>
     </form>
+
+    {% if query %}
+      <div class="direct-section">
+        <h2>Search results</h2>
+        {% if users %}
+          <div class="conversation-list">
+            {% for user in users %}
+              <a class="conversation-item" href="{{ url_for('chat.private_chat', username=user.username) }}">
+                <span class="avatar">{{ user.username[:1]|upper }}</span>
+                <span class="conversation-copy">
+                  <strong>{{ user.username }}</strong>
+                  <small>Send a private message</small>
+                </span>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="empty-state-inline">No users found.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="direct-section">
+      <h2>Messages</h2>
+      <div class="conversation-list" data-private-list>
+        {% if inbox.private %}
+          {% for conversation in inbox.private %}
+            <a class="conversation-item" href="{{ url_for('chat.private_chat', username=conversation.username) }}">
+              <span class="avatar">{{ conversation.username[:1]|upper }}</span>
+              <span class="conversation-copy">
+                <strong>{{ conversation.username }}</strong>
+                <small>{{ conversation.last_message.message }}</small>
+              </span>
+              {% if conversation.unread %}
+                <span class="badge">{{ conversation.unread }}</span>
+              {% endif %}
+            </a>
+          {% endfor %}
+        {% else %}
+          <p class="empty-state-inline">No private conversations yet.</p>
+        {% endif %}
+      </div>
+    </div>
   </section>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/chat.js', v='2.4') }}" defer></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
+  <script src="{{ url_for('static', filename='js/direct.js', v='1.0') }}" defer></script>
 {% endblock %}

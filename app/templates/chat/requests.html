@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Message Requests - YChat 2.0{% endblock %}
+
+{% block content %}
+  <section class="direct-shell" data-summary-url="{{ url_for('chat.private_summary_api') }}">
+    <header class="direct-header">
+      <div>
+        <span class="eyebrow">YChat Direct</span>
+        <h1>طلبات المراسلة</h1>
+      </div>
+    </header>
+
+    <nav class="direct-tabs" aria-label="Direct tabs">
+      <a class="direct-tab" href="{{ url_for('chat.index') }}">
+        الخاص
+        <span class="badge private-badge{% if not inbox.private_unread_count %} is-hidden{% endif %}" data-private-badge>
+          {{ inbox.private_unread_count }}
+        </span>
+      </a>
+      <a class="direct-tab active" href="{{ url_for('chat.message_requests') }}">
+        طلبات المراسلة
+        <span class="badge request-badge{% if not inbox.request_count %} is-hidden{% endif %}" data-request-badge>
+          {{ inbox.request_count }}
+        </span>
+      </a>
+    </nav>
+
+    <div class="direct-section">
+      <h2>Pending requests</h2>
+      <div class="conversation-list" data-requests-list>
+        {% if inbox.requests %}
+          {% for conversation in inbox.requests %}
+            <article class="conversation-item request-item" data-request-user="{{ conversation.username }}">
+              <span class="avatar">{{ conversation.username[:1]|upper }}</span>
+              <span class="conversation-copy">
+                <strong>{{ conversation.username }}</strong>
+                <small>{{ conversation.last_message.message }}</small>
+              </span>
+              <span class="request-actions">
+                <button class="button button-primary" data-accept-url="{{ url_for('chat.accept_private_request_api', username=conversation.username) }}">Accept</button>
+                <button class="button button-ghost" data-reject-url="{{ url_for('chat.reject_private_request_api', username=conversation.username) }}">Reject</button>
+              </span>
+            </article>
+          {% endfor %}
+        {% else %}
+          <p class="empty-state-inline">No message requests.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
+  <script src="{{ url_for('static', filename='js/direct.js', v='1.0') }}" defer></script>
+{% endblock %}

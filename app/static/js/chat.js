@@ -45,7 +45,16 @@ function createMessageElement(item) {
 }
 
 function appendNewMessages(messages) {
-  const newMessages = messages.filter((item) => !seenMessageIds.has(String(item.id)));
+  const conversationUser = messagesElement.dataset.conversationUser;
+  const currentUser = messagesElement.dataset.currentUser;
+  const newMessages = messages.filter((item) => {
+    if (seenMessageIds.has(String(item.id))) return false;
+    if (!conversationUser) return true;
+    return (
+      (item.username === currentUser && item.receiver === conversationUser) ||
+      (item.username === conversationUser && item.receiver === currentUser)
+    );
+  });
 
   if (newMessages.length === 0) {
     if (messages.length === 0 && seenMessageIds.size === 0) {
@@ -135,3 +144,12 @@ bodyInput.addEventListener("keydown", (event) => {
 
 refreshMessages();
 window.setInterval(refreshMessages, 2000);
+
+window.addEventListener("load", () => {
+  if (!window.io) return;
+
+  const socket = window.io({ transports: ["polling", "websocket"] });
+  socket.on("private_message", (message) => {
+    appendNewMessages([message]);
+  });
+});

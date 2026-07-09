@@ -3,7 +3,7 @@ from pathlib import Path
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import get_config
-from app.extensions import db, login_manager
+from app.extensions import db, login_manager, socketio
 
 
 def create_app(config_class=None):
@@ -16,6 +16,7 @@ def create_app(config_class=None):
 
     db.init_app(app)
     login_manager.init_app(app)
+    socketio.init_app(app)
     login_manager.login_view = "auth.login"
     login_manager.login_message_category = "info"
 

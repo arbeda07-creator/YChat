@@ -8,7 +8,11 @@
       <div>
         <span class="eyebrow">Private Chat</span>
         <h1>{{ other_user.username }}</h1>
-        <p>Only you and {{ other_user.username }} can see these messages.</p>
+        {% if conversation_status == "pending" %}
+          <p>This message is waiting for approval.</p>
+        {% else %}
+          <p>Only you and {{ other_user.username }} can see these messages.</p>
+        {% endif %}
       </div>
       <span class="connection-status" id="connection-status" role="status">
         <span class="status-dot"></span>
@@ -21,6 +25,7 @@
       id="messages"
       aria-live="polite"
       data-current-user="{{ current_user.username }}"
+      data-conversation-user="{{ other_user.username }}"
       data-messages-url="{{ url_for('chat.private_messages_api', username=other_user.username) }}"
       data-send-url="{{ url_for('chat.send_private_api', username=other_user.username) }}"
     >
@@ -37,5 +42,6 @@
 {% endblock %}
 
 {% block scripts %}
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
   <script src="{{ url_for('static', filename='js/chat.js', v='2.4') }}" defer></script>
 {% endblock %}
