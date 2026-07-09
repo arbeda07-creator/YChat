@@ -116,12 +116,5 @@ document.addEventListener("click", async (event) => {
 
 window.addEventListener("load", () => {
   fetchSummary();
-
-  if (!window.io) {
-    window.setInterval(fetchSummary, 3000);
-    return;
-  }
-
-  const socket = window.io({ transports: ["polling", "websocket"] });
-  socket.on("dm_update", refreshDirect);
+  window.setInterval(fetchSummary, 3000);
 });

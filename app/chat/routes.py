@@ -11,7 +11,6 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required
-from flask_socketio import join_room
 
 from app.chat.storage import (
     accept_message_request,
@@ -25,7 +24,6 @@ from app.chat.storage import (
     save_private_message,
     wait_for_messages_after,
 )
-from app.extensions import socketio
 from app.models import User
 
 
@@ -83,15 +81,6 @@ def _message_payload(message):
     }
 
 
-def _emit_dm_updates(*usernames):
-    for username in set(usernames):
-        socketio.emit(
-            "dm_update",
-            get_private_inbox(username),
-            to=username,
-        )
-
-
 @chat_bp.get("/users")
 @login_required
 def user_search():
@@ -139,7 +128,6 @@ def private_messages_api(username):
     )
     if status == "accepted":
         mark_private_messages_read(current_user.username, other_user.username)
-        _emit_dm_updates(current_user.username)
 
     response = jsonify(
         {
@@ -170,9 +158,6 @@ def send_private_api(username):
     if not message:
         return jsonify({"error": "This message request was rejected."}), 403
 
-    _emit_dm_updates(current_user.username, other_user.username)
-    socketio.emit("private_message", _message_payload(message), to=current_user.username)
-    socketio.emit("private_message", _message_payload(message), to=other_user.username)
     return jsonify({"message": _message_payload(message)}), 201
 
 
@@ -186,7 +171,6 @@ def accept_private_request_api(username):
     if not accept_message_request(current_user.username, other_user.username):
         return jsonify({"error": "Message request was not found."}), 404
 
-    _emit_dm_updates(current_user.username, other_user.username)
     return jsonify({"ok": True, "redirect": url_for("chat.private_chat", username=username)})
 
 
@@ -200,7 +184,6 @@ def reject_private_request_api(username):
     if not reject_message_request(current_user.username, other_user.username):
         return jsonify({"error": "Message request was not found."}), 404
 
-    _emit_dm_updates(current_user.username, other_user.username)
     return jsonify({"ok": True})
 
 
@@ -252,10 +235,3 @@ def send_api():
 
     message = save_message(current_user.username, body)
     return jsonify({"message": message}), 201
-
-
-@socketio.on("connect")
-def socket_connect():
-    if current_user.is_authenticated:
-        join_room(current_user.username)
-        socketio.emit("dm_update", get_private_inbox(current_user.username))

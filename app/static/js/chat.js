@@ -144,12 +144,3 @@ bodyInput.addEventListener("keydown", (event) => {
 
 refreshMessages();
 window.setInterval(refreshMessages, 2000);
-
-window.addEventListener("load", () => {
-  if (!window.io) return;
-
-  const socket = window.io({ transports: ["polling", "websocket"] });
-  socket.on("private_message", (message) => {
-    appendNewMessages([message]);
-  });
-});
