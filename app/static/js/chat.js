@@ -380,6 +380,28 @@ async function sendReaction(messageId, emoji) {
   await refreshMessages();
 }
 
+function recordingErrorMessage(error) {
+  switch (error?.name) {
+    case "NotAllowedError":
+    case "PermissionDeniedError":
+      return "Microphone access is blocked. Allow it in the browser and in Windows privacy settings, then reload.";
+    case "NotFoundError":
+    case "DevicesNotFoundError":
+      return "No microphone was found. Connect or enable a microphone and try again.";
+    case "NotReadableError":
+    case "TrackStartError":
+      return "The microphone is busy or unavailable. Close other apps using it and try again.";
+    case "SecurityError":
+      return "The microphone requires a secure HTTPS connection.";
+    case "NotSupportedError":
+      return "This browser cannot record a supported audio format.";
+    case "AbortError":
+      return "Microphone access was interrupted. Please try again.";
+    default:
+      return "Voice recording could not start. Check the selected microphone and try again.";
+  }
+}
+
 async function startRecording() {
   if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
     setError("Voice recording is not supported in this browser.");
@@ -421,7 +443,8 @@ async function startRecording() {
       if (mediaRecorder?.state === "recording") mediaRecorder.stop();
     }, 60000);
   } catch (error) {
-    setError("Microphone permission was not granted.");
+    console.error("Voice recording failed", error);
+    setError(recordingErrorMessage(error));
   }
 }
 
