@@ -18,6 +18,7 @@ const reactionEmojis = ["❤️", "😂", "👍", "😮", "😢", "🔥"];
 let refreshInProgress = false;
 let currentReply = null;
 let mediaRecorder = null;
+let activeMicrophoneStream = null;
 let recordedChunks = [];
 let recordingTimeout = null;
 let lastRenderedSignature = "";
@@ -320,7 +321,7 @@ async function sendMessage({ voiceBlob } = {}) {
     if (voiceBlob) {
       const formData = new FormData();
       formData.append("message", message);
-      formData.append("voice", voiceBlob, "voice-message.webm");
+      formData.append("voice", voiceBlob, voiceFilename(voiceBlob.type));
       if (currentReply) formData.append("reply_to", currentReply.id);
 
       response = await fetch(messagesElement.dataset.sendUrl, {
@@ -359,6 +360,16 @@ async function sendMessage({ voiceBlob } = {}) {
   }
 }
 
+function voiceFilename(mimeType) {
+  const normalizedType = (mimeType || "").split(";", 1)[0].toLowerCase();
+  const extension = {
+    "audio/mp4": "m4a",
+    "audio/ogg": "ogg",
+    "audio/webm": "webm",
+  }[normalizedType] || "webm";
+  return `voice-message.${extension}`;
+}
+
 async function sendReaction(messageId, emoji) {
   const url = replaceTrailingMessageId(
     messagesElement.dataset.reactionUrlTemplate,
@@ -384,66 +395,134 @@ function recordingErrorMessage(error) {
   switch (error?.name) {
     case "NotAllowedError":
     case "PermissionDeniedError":
-      return "Microphone access is blocked. Allow it in the browser and in Windows privacy settings, then reload.";
+      return "تم رفض إذن الميكروفون. اسمح للموقع باستخدامه من إعدادات المتصفح ثم أعد تحميل الصفحة.";
     case "NotFoundError":
     case "DevicesNotFoundError":
-      return "No microphone was found. Connect or enable a microphone and try again.";
+      return "لم يعثر المتصفح على ميكروفون. تأكد من توصيله وتفعيله في إعدادات الجهاز.";
     case "NotReadableError":
     case "TrackStartError":
-      return "The microphone is busy or unavailable. Close other apps using it and try again.";
+      return "الميكروفون مشغول أو غير متاح. أغلق التطبيقات الأخرى التي تستخدمه ثم حاول مجددًا.";
     case "SecurityError":
-      return "The microphone requires a secure HTTPS connection.";
-    case "NotSupportedError":
-      return "This browser cannot record a supported audio format.";
+      return "منع المتصفح تشغيل الميكروفون بسبب قيود الأمان.";
     case "AbortError":
-      return "Microphone access was interrupted. Please try again.";
+      return "فشل بدء الميكروفون. حاول مرة أخرى.";
+    case "TypeError":
+      return "تعذر تشغيل التسجيل بسبب عدم توافق واجهة الميكروفون في هذا المتصفح.";
+    case "NotSupportedError":
+      return "هذا المتصفح لا يدعم تسجيل الصوت بصيغة متوافقة.";
     default:
-      return "Voice recording could not start. Check the selected microphone and try again.";
+      return "تعذر بدء التسجيل الصوتي. تحقق من الميكروفون وحاول مرة أخرى.";
   }
 }
 
+function logRecordingError(error) {
+  console.error(error.name, error.message, error);
+}
+
+function stopMicrophoneTracks(stream) {
+  if (!stream) return;
+  stream.getTracks().forEach((track) => track.stop());
+  if (activeMicrophoneStream === stream) activeMicrophoneStream = null;
+}
+
+function preferredRecordingMimeType() {
+  if (typeof window.MediaRecorder?.isTypeSupported !== "function") return null;
+
+  const preferredTypes = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/ogg;codecs=opus",
+  ];
+  return preferredTypes.find((type) => window.MediaRecorder.isTypeSupported(type)) || null;
+}
+
 async function startRecording() {
-  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-    setError("Voice recording is not supported in this browser.");
+  if (!navigator.mediaDevices) {
+    setError("هذا المتصفح لا يوفر واجهة الوصول إلى الميكروفون.");
+    return;
+  }
+  if (typeof navigator.mediaDevices.getUserMedia !== "function") {
+    setError("هذا المتصفح لا يدعم طلب الوصول إلى الميكروفون.");
+    return;
+  }
+  if (typeof window.MediaRecorder !== "function") {
+    setError("هذا المتصفح لا يدعم تسجيل الصوت.");
     return;
   }
 
   setError("");
+  let stream = null;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    activeMicrophoneStream = stream;
+
+    if (stream.getAudioTracks().length === 0) {
+      throw new DOMException("The stream contains no audio tracks.", "NotFoundError");
+    }
+
     recordedChunks = [];
-    const options = MediaRecorder.isTypeSupported?.("audio/webm")
-      ? { mimeType: "audio/webm" }
-      : {};
-    mediaRecorder = new MediaRecorder(stream, options);
-    mediaRecorder.addEventListener("dataavailable", (event) => {
+    const mimeType = preferredRecordingMimeType();
+    const recorder = mimeType
+      ? new window.MediaRecorder(stream, { mimeType })
+      : new window.MediaRecorder(stream);
+    let recordingFailed = false;
+    mediaRecorder = recorder;
+
+    recorder.addEventListener("dataavailable", (event) => {
       if (event.data.size > 0) recordedChunks.push(event.data);
     });
-    mediaRecorder.addEventListener("stop", async () => {
+    recorder.addEventListener("error", (event) => {
+      const error = event.error || new DOMException("MediaRecorder failed.", "AbortError");
+      recordingFailed = true;
+      logRecordingError(error);
       window.clearTimeout(recordingTimeout);
-      stream.getTracks().forEach((track) => track.stop());
+      stopMicrophoneTracks(stream);
+      recordingBar.classList.add("is-hidden");
+      voiceButton.disabled = false;
+      setError(recordingErrorMessage(error));
+      if (recorder.state === "recording") recorder.stop();
+    });
+    recorder.addEventListener("stop", async () => {
+      window.clearTimeout(recordingTimeout);
+      stopMicrophoneTracks(stream);
       recordingBar.classList.add("is-hidden");
       voiceButton.disabled = false;
 
-      const voiceType = mediaRecorder.mimeType || "audio/webm";
+      if (mediaRecorder === recorder) mediaRecorder = null;
+      if (recordingFailed) {
+        recordedChunks = [];
+        return;
+      }
+
+      const voiceType = recorder.mimeType || recordedChunks[0]?.type || "audio/webm";
       const voiceBlob = new Blob(recordedChunks, { type: voiceType });
       recordedChunks = [];
+      if (voiceBlob.size === 0) {
+        setError("لم يتم تسجيل أي صوت. حاول مرة أخرى.");
+        return;
+      }
       if (voiceBlob.size > 2 * 1024 * 1024) {
-        setError("Voice message is too large.");
+        setError("الرسالة الصوتية كبيرة جدًا. سجّل رسالة أقصر.");
         return;
       }
       await sendMessage({ voiceBlob });
     });
 
-    mediaRecorder.start();
+    recorder.start();
     voiceButton.disabled = true;
     recordingBar.classList.remove("is-hidden");
-    recordingLabel.textContent = "Recording voice message...";
+    recordingLabel.textContent = "جارٍ تسجيل الرسالة الصوتية...";
     recordingTimeout = window.setTimeout(() => {
-      if (mediaRecorder?.state === "recording") mediaRecorder.stop();
+      if (recorder.state === "recording") recorder.stop();
     }, 60000);
   } catch (error) {
-    console.error("Voice recording failed", error);
+    stopMicrophoneTracks(stream);
+    mediaRecorder = null;
+    recordedChunks = [];
+    recordingBar.classList.add("is-hidden");
+    voiceButton.disabled = false;
+    logRecordingError(error);
     setError(recordingErrorMessage(error));
   }
 }
@@ -466,9 +545,13 @@ voiceButton.addEventListener("click", startRecording);
 
 recordingStop.addEventListener("click", () => {
   if (mediaRecorder?.state === "recording") {
-    recordingLabel.textContent = "Saving voice message...";
+    recordingLabel.textContent = "جارٍ حفظ الرسالة الصوتية...";
     mediaRecorder.stop();
   }
+});
+
+window.addEventListener("pagehide", () => {
+  stopMicrophoneTracks(activeMicrophoneStream);
 });
 
 messagesElement.addEventListener("click", async (event) => {
