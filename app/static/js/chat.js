@@ -431,7 +431,6 @@ function preferredRecordingMimeType() {
   // Prefer MP4/AAC because Safari on iPhone cannot reliably play WebM/Opus
   // recordings created by desktop Chrome and Edge.
   const preferredTypes = [
-    "audio/mp4;codecs=mp4a.40.2",
     "audio/mp4",
     "audio/webm;codecs=opus",
     "audio/webm",
@@ -512,7 +511,9 @@ async function startRecording() {
       await sendMessage({ voiceBlob });
     });
 
-    recorder.start();
+    // A timeslice makes Edge flush MP4 data while recording. Without it,
+    // some Edge versions report MP4 support but produce an empty final blob.
+    recorder.start(1000);
     voiceButton.disabled = true;
     recordingBar.classList.remove("is-hidden");
     recordingLabel.textContent = "جارٍ تسجيل الرسالة الصوتية...";
