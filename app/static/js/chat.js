@@ -668,7 +668,7 @@ async function startRecording() {
       await sendMessage({ voiceBlob });
     });
 
-    recorder.start(1000);
+    recorder.start();
     voiceButton.disabled = true;
     recordingBar.classList.remove("is-hidden");
     recordingLabel.textContent = "جارٍ تسجيل الرسالة الصوتية...";
