@@ -5,8 +5,10 @@ import struct
 import unittest
 import wave
 from pathlib import Path
+from unittest.mock import patch
 
 from app import create_app
+from app.chat.routes import _ffmpeg_executable
 from app.extensions import db
 from app.models import User
 
@@ -124,6 +126,13 @@ class PrivateChatTestCase(unittest.TestCase):
         output = self.upload_folder / "voice" / message["audio_name"]
         self.assertTrue(output.exists())
         self.assertGreater(output.stat().st_size, 0)
+
+    def test_voice_conversion_prefers_system_ffmpeg(self):
+        with (
+            patch.dict("os.environ", {"FFMPEG_BINARY": ""}),
+            patch("app.chat.routes.shutil.which", return_value="/usr/bin/ffmpeg"),
+        ):
+            self.assertEqual(_ffmpeg_executable(), "/usr/bin/ffmpeg")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,6 @@
 import json
+import os
+import shutil
 import subprocess
 from pathlib import Path
 from uuid import uuid4
@@ -208,11 +210,17 @@ def _save_voice_upload(file_storage):
         output_path = voice_dir / f"{upload_id}.m4a"
         try:
             _convert_voice_to_m4a(source_path, output_path)
-        except (OSError, subprocess.SubprocessError):
-            current_app.logger.exception("Voice message conversion failed")
+        except (OSError, subprocess.SubprocessError) as error:
+            stderr = getattr(error, "stderr", b"")
+            if isinstance(stderr, bytes):
+                stderr = stderr.decode("utf-8", errors="replace")
+            current_app.logger.exception(
+                "Voice message conversion failed: %s",
+                stderr or error,
+            )
             source_path.unlink(missing_ok=True)
             output_path.unlink(missing_ok=True)
-            return None, "Voice message could not be converted. Please try again."
+            return None, "تعذر تجهيز الرسالة الصوتية. حاول مرة أخرى."
         source_path.unlink(missing_ok=True)
 
     filename = output_path.name
@@ -227,10 +235,8 @@ def _save_voice_upload(file_storage):
 
 
 def _convert_voice_to_m4a(source_path, output_path):
-    import imageio_ffmpeg
-
     command = [
-        imageio_ffmpeg.get_ffmpeg_exe(),
+        _ffmpeg_executable(),
         "-y",
         "-i",
         str(source_path),
@@ -249,6 +255,20 @@ def _convert_voice_to_m4a(source_path, output_path):
         capture_output=True,
         timeout=30,
     )
+
+
+def _ffmpeg_executable():
+    configured = os.environ.get("FFMPEG_BINARY")
+    if configured:
+        return configured
+
+    system_ffmpeg = shutil.which("ffmpeg")
+    if system_ffmpeg:
+        return system_ffmpeg
+
+    import imageio_ffmpeg
+
+    return imageio_ffmpeg.get_ffmpeg_exe()
 
 
 @chat_bp.get("/users")
