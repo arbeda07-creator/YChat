@@ -159,5 +159,9 @@ document.addEventListener("click", async (event) => {
 
 window.addEventListener("load", () => {
   fetchSummary();
-  window.setInterval(fetchSummary, 3000);
+  if (!window.ychatSummaryPoll) {
+    window.ychatSummaryPoll = window.setInterval(() => {
+      if (document.visibilityState === "visible") fetchSummary();
+    }, 3000);
+  }
 });

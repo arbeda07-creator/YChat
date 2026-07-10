@@ -40,9 +40,23 @@ function formatTime(isoTime) {
   const date = new Date(isoTime);
   if (Number.isNaN(date.getTime())) return isoTime;
 
+  const now = new Date();
+  const time = new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  if (date.toDateString() === now.toDateString()) return time;
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return `Yesterday, ${time}`;
+
   return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
+    day: "numeric",
+    month: "short",
+    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(date);
 }
 
@@ -89,11 +103,83 @@ function createAudioPlayer(item) {
   wrap.className = "voice-player";
 
   const audio = document.createElement("audio");
-  audio.controls = true;
   audio.preload = "metadata";
   audio.src = item.audio_url;
+  audio.playsInline = true;
 
-  wrap.append(audio);
+  const playButton = document.createElement("button");
+  playButton.type = "button";
+  playButton.className = "voice-play-button";
+  playButton.setAttribute("aria-label", "Play voice message");
+  const playIcon = document.createElement("span");
+  playIcon.textContent = "▶";
+  playButton.append(playIcon);
+
+  const progress = document.createElement("input");
+  progress.className = "voice-progress";
+  progress.type = "range";
+  progress.min = "0";
+  progress.max = "1000";
+  progress.value = "0";
+  progress.setAttribute("aria-label", "Voice message progress");
+
+  const time = document.createElement("span");
+  time.className = "voice-time";
+  time.textContent = "0:00";
+
+  const formatDuration = (seconds) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+    const minutes = Math.floor(seconds / 60);
+    const remainder = Math.floor(seconds % 60).toString().padStart(2, "0");
+    return `${minutes}:${remainder}`;
+  };
+
+  const updateProgress = () => {
+    progress.value = audio.duration
+      ? Math.round((audio.currentTime / audio.duration) * 1000).toString()
+      : "0";
+    time.textContent = formatDuration(audio.currentTime || audio.duration);
+  };
+
+  playButton.addEventListener("click", async () => {
+    if (audio.paused) {
+      document.querySelectorAll(".voice-player audio").forEach((otherAudio) => {
+        if (otherAudio !== audio) otherAudio.pause();
+      });
+      try {
+        await audio.play();
+      } catch (error) {
+        time.textContent = "Error";
+      }
+    } else {
+      audio.pause();
+    }
+  });
+  progress.addEventListener("input", () => {
+    if (audio.duration) audio.currentTime = (Number(progress.value) / 1000) * audio.duration;
+  });
+  audio.addEventListener("loadedmetadata", () => {
+    time.textContent = formatDuration(audio.duration);
+  });
+  audio.addEventListener("timeupdate", updateProgress);
+  audio.addEventListener("play", () => {
+    playIcon.textContent = "❚❚";
+    playButton.setAttribute("aria-label", "Pause voice message");
+  });
+  audio.addEventListener("pause", () => {
+    playIcon.textContent = "▶";
+    playButton.setAttribute("aria-label", "Play voice message");
+  });
+  audio.addEventListener("ended", () => {
+    audio.currentTime = 0;
+    updateProgress();
+  });
+  audio.addEventListener("error", () => {
+    playButton.disabled = true;
+    time.textContent = "Error";
+  });
+
+  wrap.append(audio, playButton, progress, time);
   return wrap;
 }
 
@@ -146,6 +232,17 @@ function createActions(item) {
   return actions;
 }
 
+function createToolsButton(item) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "message-tools-button";
+  button.dataset.toggleMessageActions = item.id;
+  button.setAttribute("aria-label", "Message actions");
+  button.setAttribute("aria-expanded", "false");
+  button.textContent = "•••";
+  return button;
+}
+
 function createReactionPicker(item) {
   const picker = document.createElement("div");
   picker.className = "reaction-picker is-hidden";
@@ -170,6 +267,7 @@ function createMessageElement(item) {
   article.dataset.messageId = item.id;
   article.dataset.replyName = item.display_name || item.username;
   article.dataset.replyText = messageSummary(item);
+  article.dataset.renderSignature = messageRenderSignature(item);
   if (item.username === messagesElement.dataset.currentUser) {
     article.classList.add("message-own");
   }
@@ -184,7 +282,7 @@ function createMessageElement(item) {
   time.dateTime = item.time;
   time.textContent = formatTime(item.time);
 
-  meta.append(username, time);
+  meta.append(username, time, createToolsButton(item));
   article.append(createAvatar(item), meta);
 
   if (item.reply) {
@@ -212,6 +310,19 @@ function createMessageElement(item) {
   return article;
 }
 
+function messageRenderSignature(item) {
+  return JSON.stringify({
+    id: item.id,
+    message: item.message,
+    type: item.message_type,
+    audio: item.audio_url,
+    reply: item.reply,
+    reactions: item.reactions,
+    mine: item.my_reaction,
+    read: item.is_read,
+  });
+}
+
 function visibleConversationMessages(messages) {
   const conversationUser = messagesElement.dataset.conversationUser;
   const currentUser = messagesElement.dataset.currentUser;
@@ -227,35 +338,49 @@ function visibleConversationMessages(messages) {
 
 function renderMessages(messages) {
   const visibleMessages = visibleConversationMessages(messages);
-  const signature = JSON.stringify(visibleMessages.map((item) => ({
-    id: item.id,
-    message: item.message,
-    type: item.message_type,
-    audio: item.audio_url,
-    reply: item.reply?.id || null,
-    reactions: item.reactions,
-    mine: item.my_reaction,
-    read: item.is_read,
-  })));
+  const signature = JSON.stringify(visibleMessages.map(messageRenderSignature));
 
   if (signature === lastRenderedSignature) return;
   lastRenderedSignature = signature;
 
   const shouldStickToBottom =
-    messagesElement.scrollHeight - messagesElement.scrollTop - messagesElement.clientHeight < 90;
-  messagesElement.replaceChildren();
+    messagesElement.scrollHeight - messagesElement.scrollTop - messagesElement.clientHeight < 80;
+  const containerTop = messagesElement.getBoundingClientRect().top;
+  const anchor = Array.from(messagesElement.querySelectorAll(".message")).find((element) => (
+    element.getBoundingClientRect().bottom > containerTop
+  ));
+  const anchorId = anchor?.dataset.messageId;
+  const anchorOffset = anchor ? anchor.getBoundingClientRect().top - containerTop : 0;
 
   if (visibleMessages.length === 0) {
+    messagesElement.replaceChildren();
     showEmptyState();
     return;
   }
 
-  const fragment = document.createDocumentFragment();
-  visibleMessages.forEach((item) => fragment.append(createMessageElement(item)));
-  messagesElement.append(fragment);
+  const existing = new Map(
+    Array.from(messagesElement.querySelectorAll(".message")).map((element) => (
+      [element.dataset.messageId, element]
+    ))
+  );
+  const nextElements = visibleMessages.map((item) => {
+    const element = existing.get(String(item.id));
+    const itemSignature = messageRenderSignature(item);
+    return element?.dataset.renderSignature === itemSignature
+      ? element
+      : createMessageElement(item);
+  });
+  messagesElement.replaceChildren(...nextElements);
 
   if (shouldStickToBottom) {
-    messagesElement.scrollTop = messagesElement.scrollHeight;
+    window.requestAnimationFrame(() => {
+      messagesElement.scrollTop = messagesElement.scrollHeight;
+    });
+  } else if (anchorId) {
+    const nextAnchor = messagesElement.querySelector(`[data-message-id="${anchorId}"]`);
+    if (nextAnchor) {
+      messagesElement.scrollTop += nextAnchor.getBoundingClientRect().top - containerTop - anchorOffset;
+    }
   }
 }
 
@@ -306,6 +431,38 @@ function clearReply() {
   replyPreview.classList.add("is-hidden");
   replyName.textContent = "Reply";
   replyText.textContent = "";
+}
+
+function resizeComposerInput() {
+  bodyInput.style.height = "auto";
+  bodyInput.style.height = `${Math.min(bodyInput.scrollHeight, 96)}px`;
+}
+
+function setupMobileViewport() {
+  if (!document.body.classList.contains("chat-page")) return;
+
+  let baselineHeight = window.visualViewport?.height || window.innerHeight;
+  const updateViewport = () => {
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const inputFocused = document.activeElement === bodyInput;
+    const keyboardOpen = inputFocused && baselineHeight - viewportHeight > 120;
+    document.body.classList.toggle("keyboard-open", keyboardOpen);
+    if (keyboardOpen) {
+      document.documentElement.style.setProperty("--chat-viewport-height", `${viewportHeight}px`);
+    } else {
+      document.documentElement.style.removeProperty("--chat-viewport-height");
+    }
+  };
+
+  window.visualViewport?.addEventListener("resize", updateViewport);
+  bodyInput.addEventListener("focus", () => window.setTimeout(updateViewport, 80));
+  bodyInput.addEventListener("blur", () => window.setTimeout(updateViewport, 80));
+  window.addEventListener("orientationchange", () => {
+    window.setTimeout(() => {
+      baselineHeight = window.visualViewport?.height || window.innerHeight;
+      updateViewport();
+    }, 250);
+  });
 }
 
 async function sendMessage({ voiceBlob } = {}) {
@@ -540,6 +697,7 @@ bodyInput.addEventListener("keydown", (event) => {
     composer.requestSubmit();
   }
 });
+bodyInput.addEventListener("input", resizeComposerInput);
 
 replyCancel.addEventListener("click", clearReply);
 
@@ -557,11 +715,26 @@ window.addEventListener("pagehide", () => {
 });
 
 messagesElement.addEventListener("click", async (event) => {
+  const toolsButton = event.target.closest("[data-toggle-message-actions]");
   const replyButton = event.target.closest("[data-reply-message-id]");
   const openReactions = event.target.closest("[data-open-reactions]");
   const reactionButton = event.target.closest("[data-reaction]");
   const deleteButton = event.target.closest("[data-delete-message-id]");
   const quoteButton = event.target.closest("[data-scroll-to-message]");
+
+  if (toolsButton) {
+    const message = toolsButton.closest(".message");
+    const actions = message?.querySelector(".message-actions");
+    const willOpen = !actions?.classList.contains("is-open");
+    messagesElement.querySelectorAll(".message-actions.is-open").forEach((element) => {
+      element.classList.remove("is-open");
+      element.closest(".message")?.querySelector("[data-toggle-message-actions]")
+        ?.setAttribute("aria-expanded", "false");
+    });
+    actions?.classList.toggle("is-open", willOpen);
+    toolsButton.setAttribute("aria-expanded", String(willOpen));
+    return;
+  }
 
   if (replyButton) {
     const message = replyButton.closest(".message");
@@ -645,5 +818,11 @@ deleteChatButton?.addEventListener("click", async () => {
   }
 });
 
+setupMobileViewport();
+resizeComposerInput();
 refreshMessages();
-window.setInterval(refreshMessages, 2000);
+if (!window.ychatMessagePoll) {
+  window.ychatMessagePoll = window.setInterval(() => {
+    if (document.visibilityState === "visible") refreshMessages();
+  }, 2000);
+}

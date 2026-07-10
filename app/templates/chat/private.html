@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Chat with {{ other_user.username }} - YChat 2.0{% endblock %}
+{% block body_class %}chat-page{% endblock %}
 
 {% block content %}
   <section class="chat-layout">
@@ -13,7 +14,6 @@
           <span class="avatar">{{ other_user.display_label[:1]|upper }}</span>
         {% endif %}
         <div>
-          <span class="eyebrow">Private Chat</span>
           <h1>{{ other_user.display_label }}</h1>
           {% if conversation_status == "pending" %}
             <p>This message is waiting for approval.</p>
@@ -71,7 +71,7 @@
         </svg>
       </button>
       <label class="sr-only" for="body">Message</label>
-      <textarea id="body" name="body" rows="2" maxlength="2000" placeholder="Write a private message..."></textarea>
+      <textarea id="body" name="body" rows="1" maxlength="2000" placeholder="Write a private message..."></textarea>
       <button class="button button-primary send-button" type="submit" aria-label="Send">&rarr;</button>
       <p class="composer-error" id="composer-error" role="alert"></p>
     </form>
@@ -79,5 +79,5 @@
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/chat.js', v='4.6') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/chat.js', v='5.0') }}" defer></script>
 {% endblock %}
