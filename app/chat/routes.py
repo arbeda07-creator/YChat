@@ -144,6 +144,10 @@ def _message_payload(message, user_cards=None, messages_by_id=None):
         "reply": _reply_payload(message, messages_by_id, user_cards),
         "reactions": _reaction_payload(reactions),
         "my_reaction": reactions.get(current_user.username),
+        "is_read": (
+            message["sender"] == current_user.username
+            and message["receiver"] in message.get("read_by", [])
+        ),
     }
 
 

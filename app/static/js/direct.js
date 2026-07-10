@@ -33,6 +33,34 @@ function refreshBadges(summary) {
   updateBadges(requestBadges, summary.request_count || 0);
 }
 
+function formatConversationTime(isoTime) {
+  const date = new Date(isoTime);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function conversationPreview(message) {
+  if (message.message) return message.message;
+  if (message.message_type === "voice") return "Voice message";
+  return "Message";
+}
+
 function renderPrivateList(conversations) {
   if (!privateList) return;
   if (!conversations.length) {
@@ -45,10 +73,10 @@ function renderPrivateList(conversations) {
       ${avatarMarkup(conversation)}
       <span class="conversation-copy">
         <strong>${escapeHtml(conversation.display_name || conversation.username)}</strong>
-        <small>${escapeHtml(conversation.last_message.message)}</small>
+        <small>${escapeHtml(conversationPreview(conversation.last_message))}</small>
       </span>
       <span class="conversation-meta">
-        <small>${conversation.unread ? "11:34" : "أمس"}</small>
+        <small>${escapeHtml(formatConversationTime(conversation.last_message.time))}</small>
         ${conversation.unread ? `<span class="badge">${conversation.unread}</span>` : ""}
       </span>
     </a>
@@ -67,7 +95,7 @@ function renderRequestsList(requests) {
       ${avatarMarkup(conversation)}
       <span class="conversation-copy">
         <strong>${escapeHtml(conversation.display_name || conversation.username)}</strong>
-        <small>${escapeHtml(conversation.last_message.message)}</small>
+        <small>${escapeHtml(conversationPreview(conversation.last_message))}</small>
       </span>
       <span class="request-actions">
         <button class="button button-primary" data-accept-url="/api/dm/${encodeURIComponent(conversation.username)}/accept">Accept</button>

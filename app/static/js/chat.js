@@ -130,7 +130,10 @@ function createActions(item) {
 
   actions.append(replyButton, reactionButton);
 
-  if (messagesElement.dataset.deleteMessageUrlTemplate) {
+  if (
+    messagesElement.dataset.deleteMessageUrlTemplate
+    && item.username === messagesElement.dataset.currentUser
+  ) {
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className = "message-delete";
@@ -197,6 +200,13 @@ function createMessageElement(item) {
     article.append(createAudioPlayer(item));
   }
 
+  if (item.username === messagesElement.dataset.currentUser && item.is_read) {
+    const receipt = document.createElement("small");
+    receipt.className = "message-read-receipt";
+    receipt.textContent = "Seen";
+    article.append(receipt);
+  }
+
   article.append(createReactions(item), createActions(item), createReactionPicker(item));
   return article;
 }
@@ -224,6 +234,7 @@ function renderMessages(messages) {
     reply: item.reply?.id || null,
     reactions: item.reactions,
     mine: item.my_reaction,
+    read: item.is_read,
   })));
 
   if (signature === lastRenderedSignature) return;

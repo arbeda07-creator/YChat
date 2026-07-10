@@ -339,6 +339,7 @@ def delete_private_message(username, other_username, message_id):
             if not (
                 int(message.get("id", 0)) == message_id
                 and _conversation_matches(message, username, other_username)
+                and message.get("sender") == username
             )
         ]
         changed = len(next_messages) != len(messages)
