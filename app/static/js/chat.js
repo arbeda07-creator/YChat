@@ -19,8 +19,8 @@ let refreshInProgress = false;
 let currentReply = null;
 let mediaRecorder = null;
 let activeMicrophoneStream = null;
-let recordedChunks = [];
 let recordingTimeout = null;
+let recordingStartInProgress = false;
 let lastRenderedSignature = "";
 
 function withCacheBust(path) {
@@ -596,7 +596,34 @@ function preferredRecordingMimeType() {
   return preferredTypes.find((type) => window.MediaRecorder.isTypeSupported(type)) || null;
 }
 
+function isPlayableAudioBlob(blob) {
+  return new Promise((resolve) => {
+    const audio = document.createElement("audio");
+    const objectUrl = URL.createObjectURL(blob);
+    const timeout = window.setTimeout(() => finish(false), 5000);
+
+    const finish = (isPlayable) => {
+      window.clearTimeout(timeout);
+      audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("error", handleError);
+      audio.removeAttribute("src");
+      audio.load();
+      URL.revokeObjectURL(objectUrl);
+      resolve(isPlayable);
+    };
+    const handleCanPlay = () => finish(true);
+    const handleError = () => finish(false);
+
+    audio.preload = "auto";
+    audio.addEventListener("canplay", handleCanPlay, { once: true });
+    audio.addEventListener("error", handleError, { once: true });
+    audio.src = objectUrl;
+    audio.load();
+  });
+}
+
 async function startRecording() {
+  if (recordingStartInProgress || mediaRecorder) return;
   if (!navigator.mediaDevices) {
     setError("هذا المتصفح لا يوفر واجهة الوصول إلى الميكروفون.");
     return;
@@ -611,6 +638,8 @@ async function startRecording() {
   }
 
   setError("");
+  recordingStartInProgress = true;
+  voiceButton.disabled = true;
   let stream = null;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -620,7 +649,7 @@ async function startRecording() {
       throw new DOMException("The stream contains no audio tracks.", "NotFoundError");
     }
 
-    recordedChunks = [];
+    const recordedChunks = [];
     const mimeType = preferredRecordingMimeType();
     const recorder = mimeType
       ? new window.MediaRecorder(stream, { mimeType })
@@ -650,19 +679,21 @@ async function startRecording() {
 
       if (mediaRecorder === recorder) mediaRecorder = null;
       if (recordingFailed) {
-        recordedChunks = [];
         return;
       }
 
       const voiceType = recorder.mimeType || recordedChunks[0]?.type || "audio/webm";
       const voiceBlob = new Blob(recordedChunks, { type: voiceType });
-      recordedChunks = [];
       if (voiceBlob.size === 0) {
         setError("لم يتم تسجيل أي صوت. حاول مرة أخرى.");
         return;
       }
       if (voiceBlob.size > 2 * 1024 * 1024) {
         setError("الرسالة الصوتية كبيرة جدًا. سجّل رسالة أقصر.");
+        return;
+      }
+      if (!await isPlayableAudioBlob(voiceBlob)) {
+        setError("The voice recording is invalid. Please record it again.");
         return;
       }
       await sendMessage({ voiceBlob });
@@ -678,11 +709,12 @@ async function startRecording() {
   } catch (error) {
     stopMicrophoneTracks(stream);
     mediaRecorder = null;
-    recordedChunks = [];
     recordingBar.classList.add("is-hidden");
     voiceButton.disabled = false;
     logRecordingError(error);
     setError(recordingErrorMessage(error));
+  } finally {
+    recordingStartInProgress = false;
   }
 }
 
