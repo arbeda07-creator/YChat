@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 from uuid import uuid4
 
@@ -197,15 +198,57 @@ def _save_voice_upload(file_storage):
     voice_dir = upload_root / "voice"
     voice_dir.mkdir(parents=True, exist_ok=True)
     original = secure_filename(file_storage.filename or f"voice.{extension}")
-    filename = f"voice-{current_user.id}-{uuid4().hex}.{extension}"
-    file_storage.save(voice_dir / filename)
+    upload_id = f"voice-{current_user.id}-{uuid4().hex}"
+    source_path = voice_dir / f"{upload_id}.{extension}"
+    file_storage.save(source_path)
+
+    if content_type == "audio/mp4":
+        output_path = source_path
+    else:
+        output_path = voice_dir / f"{upload_id}.m4a"
+        try:
+            _convert_voice_to_m4a(source_path, output_path)
+        except (OSError, subprocess.SubprocessError):
+            current_app.logger.exception("Voice message conversion failed")
+            source_path.unlink(missing_ok=True)
+            output_path.unlink(missing_ok=True)
+            return None, "Voice message could not be converted. Please try again."
+        source_path.unlink(missing_ok=True)
+
+    filename = output_path.name
+    output_size = output_path.stat().st_size
     return {
         "filename": filename,
         "original_name": original,
-        "content_type": content_type,
-        "size": size,
+        "content_type": "audio/mp4",
+        "size": output_size,
         "url": url_for("static", filename=f"uploads/voice/{filename}"),
     }, None
+
+
+def _convert_voice_to_m4a(source_path, output_path):
+    import imageio_ffmpeg
+
+    command = [
+        imageio_ffmpeg.get_ffmpeg_exe(),
+        "-y",
+        "-i",
+        str(source_path),
+        "-vn",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "64k",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+    subprocess.run(
+        command,
+        check=True,
+        capture_output=True,
+        timeout=30,
+    )
 
 
 @chat_bp.get("/users")

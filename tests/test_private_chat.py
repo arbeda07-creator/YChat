@@ -1,4 +1,9 @@
+import io
+import math
+import shutil
+import struct
 import unittest
+import wave
 from pathlib import Path
 
 from app import create_app
@@ -11,8 +16,10 @@ class PrivateChatTestCase(unittest.TestCase):
         root = Path(__file__).resolve().parent
         self.messages_file = root / "test-messages.json"
         self.private_messages_file = root / "test-private-messages.json"
+        self.upload_folder = root / "test-uploads"
         self.messages_file.unlink(missing_ok=True)
         self.private_messages_file.unlink(missing_ok=True)
+        shutil.rmtree(self.upload_folder, ignore_errors=True)
 
         class TestConfig:
             TESTING = True
@@ -21,7 +28,7 @@ class PrivateChatTestCase(unittest.TestCase):
             SQLALCHEMY_TRACK_MODIFICATIONS = False
             MESSAGES_FILE = str(self.messages_file)
             PRIVATE_MESSAGES_FILE = str(self.private_messages_file)
-            UPLOAD_FOLDER = str(root / "test-uploads")
+            UPLOAD_FOLDER = str(self.upload_folder)
             MAX_CONTENT_LENGTH = 2 * 1024 * 1024
             FORCE_HTTPS = False
             SESSION_COOKIE_SECURE = False
@@ -48,6 +55,7 @@ class PrivateChatTestCase(unittest.TestCase):
             db.drop_all()
         self.messages_file.unlink(missing_ok=True)
         self.private_messages_file.unlink(missing_ok=True)
+        shutil.rmtree(self.upload_folder, ignore_errors=True)
 
     @staticmethod
     def _login(client, user_id):
@@ -89,6 +97,33 @@ class PrivateChatTestCase(unittest.TestCase):
             self.alice.get("/api/dm/bob/messages").get_json()["messages"],
             [],
         )
+
+    def test_voice_upload_is_converted_to_m4a(self):
+        audio = io.BytesIO()
+        with wave.open(audio, "wb") as wav_file:
+            wav_file.setnchannels(1)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(8000)
+            samples = (
+                int(12000 * math.sin(2 * math.pi * 440 * index / 8000))
+                for index in range(4000)
+            )
+            wav_file.writeframes(b"".join(struct.pack("<h", sample) for sample in samples))
+        audio.seek(0)
+
+        response = self.alice.post(
+            "/api/dm/bob/send",
+            data={"voice": (audio, "voice.wav", "audio/wav")},
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        message = response.get_json()["message"]
+        self.assertEqual(message["message_type"], "voice")
+        self.assertTrue(message["audio_name"].endswith(".m4a"))
+        output = self.upload_folder / "voice" / message["audio_name"]
+        self.assertTrue(output.exists())
+        self.assertGreater(output.stat().st_size, 0)
 
 
 if __name__ == "__main__":
