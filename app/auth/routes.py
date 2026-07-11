@@ -71,7 +71,7 @@ def register():
             flash("Password must be 12-128 characters and include upper, lower, and numeric characters.", "error")
         elif password != confirm_password:
             flash("Passwords do not match.", "error")
-        elif User.query.filter_by(username=username).first():
+        elif User.query.filter(db.func.lower(User.username) == username.casefold()).first():
             flash("Registration could not be completed with those details.", "error")
         else:
             user = User(username=username)
@@ -92,14 +92,15 @@ def login():
         return redirect(url_for("chat.index"))
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip().casefold()
+        username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        key = client_key(username)
+        normalized_username = username.casefold()
+        key = client_key(normalized_username)
         if not rate_limit("login", key, current_app.config["LOGIN_FAILURE_LIMIT"], current_app.config["LOGIN_LOCKOUT_SECONDS"]):
             current_app.logger.warning("login_rate_limited remote=%s account=%s", log_value(request.remote_addr), log_value(username))
             flash("Sign-in is temporarily unavailable. Please try again later.", "error")
             return render_template("auth/login.html"), 429
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter(db.func.lower(User.username) == normalized_username).first()
 
         if user and user.check_password(password):
             clear_rate_limit("login", key)
@@ -107,7 +108,7 @@ def login():
             login_user(user, fresh=True)
             flash("You are signed in.", "success")
             next_page = request.args.get("next")
-            return redirect(next_page if is_safe_redirect(next_page) else url_for("chat.index"))
+            return redirect(next_page if next_page and is_safe_redirect(next_page) else url_for("chat.index"))
 
         current_app.logger.warning("login_failed remote=%s account=%s", log_value(request.remote_addr), log_value(username))
         flash("Invalid username or password.", "error")

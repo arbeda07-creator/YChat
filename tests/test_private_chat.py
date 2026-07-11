@@ -48,7 +48,9 @@ class PrivateChatTestCase(unittest.TestCase):
             bob.set_password("password2")
             charlie = User(username="charlie")
             charlie.set_password("password3")
-            db.session.add_all([alice, bob, charlie])
+            legacy_mixed_case = User(username="LegacyUser")
+            legacy_mixed_case.set_password("OldPassword123")
+            db.session.add_all([alice, bob, charlie, legacy_mixed_case])
             db.session.commit()
             self.alice_id = alice.id
             self.bob_id = bob.id
@@ -214,6 +216,18 @@ class PrivateChatTestCase(unittest.TestCase):
             for _ in range(6)
         ]
         self.assertEqual(statuses[-1], 429)
+
+    def test_existing_mixed_case_username_can_still_log_in(self):
+        client = self.app.test_client()
+        client.get("/auth/login")
+        with client.session_transaction() as session:
+            token = session["_csrf_token"]
+        response = client.post(
+            "/auth/login",
+            data={"username": "legacyuser", "password": "OldPassword123", "csrf_token": token},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/")
 
     def test_rate_limit_counter_is_atomic_across_concurrent_callers(self):
         key = "concurrent-shared-key"
