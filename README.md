@@ -23,6 +23,7 @@ For production, set:
 APP_ENV=production
 SECRET_KEY=<strong-random-secret>
 DATABASE_URL=<render-postgres-url>
+REDIS_URL=<redis-connection-url>
 ```
 
 `SECRET_KEY` must be private. Generate one with:
@@ -30,6 +31,31 @@ DATABASE_URL=<render-postgres-url>
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
+
+Private uploads are stored under `instance/uploads` by default and are served only through authenticated application routes. For production, mount a private persistent volume and set `UPLOAD_FOLDER` to that path.
+
+## Security verification
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m pip check
+$env:APP_ENV="development"; .\.venv\Scripts\python.exe app.py
+```
+
+See `SECURITY_CHECKLIST.md` before production deployment. Production requires a reachable Redis service for shared rate limits. Development uses Redis when `REDIS_URL` is reachable and otherwise logs a warning and falls back to memory.
+
+## Importing legacy JSON messages
+
+The import is idempotent and writes `.bak` files beside every JSON source before importing:
+
+```powershell
+$env:FLASK_APP="app.py"
+.\.venv\Scripts\flask.exe import-json-messages
+# After verifying message counts and history:
+.\.venv\Scripts\flask.exe import-json-messages --delete-originals
+```
+
+The second form deletes an original only after its backup exists. Keep the backups until database backups have been verified.
 
 ## Deploying On Render
 

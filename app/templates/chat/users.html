@@ -22,7 +22,7 @@
             <a class="user-result" href="{{ url_for('chat.private_chat', username=user.username) }}">
               <span class="user-result-main">
                 {% if user.profile_image %}
-                  <img class="avatar avatar-small" src="{{ url_for('static', filename='uploads/' ~ user.profile_image) }}" alt="">
+                  <img class="avatar avatar-small" src="{{ url_for('chat.profile_upload', filename=user.profile_image) }}" alt="">
                 {% else %}
                   <span class="avatar avatar-small">{{ user.display_label[:1]|upper }}</span>
                 {% endif %}

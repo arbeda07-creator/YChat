@@ -1,7 +1,4 @@
 import json
-import os
-import shutil
-import subprocess
 from pathlib import Path
 from uuid import uuid4
 
@@ -13,6 +10,7 @@ from flask import (
     jsonify,
     render_template,
     request,
+    send_from_directory,
     stream_with_context,
     url_for,
 )
@@ -35,6 +33,7 @@ from app.chat.storage import (
     wait_for_messages_after,
 )
 from app.models import User
+from app.security import client_key, log_value, rate_limit
 
 
 chat_bp = Blueprint("chat", __name__)
@@ -142,7 +141,7 @@ def _message_payload(message, user_cards=None, messages_by_id=None):
         "time": message["time"],
         "message": message.get("message", ""),
         "message_type": message.get("message_type", "text"),
-        "audio_url": message.get("audio", {}).get("url") if message.get("audio") else None,
+        "audio_url": url_for("chat.private_voice", message_id=message["id"]) if message.get("audio") else None,
         "audio_name": message.get("audio", {}).get("filename") if message.get("audio") else None,
         "reply": _reply_payload(message, messages_by_id, user_cards),
         "reactions": _reaction_payload(reactions),
@@ -167,7 +166,7 @@ def _user_card(username):
     return {
         "username": username,
         "display_name": display_name,
-        "avatar_url": url_for("static", filename=f"uploads/{profile_image}")
+        "avatar_url": url_for("chat.profile_upload", filename=profile_image)
         if profile_image
         else None,
         "initial": (display_name or username)[:1].upper(),
@@ -193,82 +192,60 @@ def _save_voice_upload(file_storage):
     file_storage.stream.seek(0)
     if size <= 0:
         return None, "Voice message is empty."
-    if size > 2 * 1024 * 1024:
+    if size > current_app.config["MAX_VOICE_BYTES"]:
         return None, "Voice message is too large."
+
+    header = file_storage.stream.read(16)
+    file_storage.stream.seek(0)
+    signatures = {
+        "webm": header.startswith(b"\x1aE\xdf\xa3"),
+        "ogg": header.startswith(b"OggS"),
+        "mp3": header.startswith((b"ID3", b"\xff\xfb", b"\xff\xf3", b"\xff\xf2")),
+        "wav": header.startswith(b"RIFF") and header[8:12] == b"WAVE",
+        "m4a": len(header) >= 12 and header[4:8] == b"ftyp",
+    }
+    if not signatures.get(extension, False):
+        return None, "Please upload a valid audio recording."
 
     upload_root = Path(current_app.config["UPLOAD_FOLDER"])
     voice_dir = upload_root / "voice"
     voice_dir.mkdir(parents=True, exist_ok=True)
     original = secure_filename(file_storage.filename or f"voice.{extension}")
-    upload_id = f"voice-{current_user.id}-{uuid4().hex}"
-    source_path = voice_dir / f"{upload_id}.{extension}"
-    file_storage.save(source_path)
-
-    if content_type == "audio/mp4":
-        output_path = source_path
-    else:
-        output_path = voice_dir / f"{upload_id}.m4a"
-        try:
-            _convert_voice_to_m4a(source_path, output_path)
-        except (OSError, subprocess.SubprocessError) as error:
-            stderr = getattr(error, "stderr", b"")
-            if isinstance(stderr, bytes):
-                stderr = stderr.decode("utf-8", errors="replace")
-            current_app.logger.exception(
-                "Voice message conversion failed: %s",
-                stderr or error,
-            )
-            source_path.unlink(missing_ok=True)
-            output_path.unlink(missing_ok=True)
-            return None, "تعذر تجهيز الرسالة الصوتية. حاول مرة أخرى."
-        source_path.unlink(missing_ok=True)
-
-    filename = output_path.name
-    output_size = output_path.stat().st_size
+    filename = f"voice-{current_user.id}-{uuid4().hex}.{extension}"
+    file_storage.save(voice_dir / filename)
     return {
         "filename": filename,
         "original_name": original,
-        "content_type": "audio/mp4",
-        "size": output_size,
-        "url": url_for("static", filename=f"uploads/voice/{filename}"),
+        "content_type": content_type,
+        "size": size,
     }, None
 
 
-def _convert_voice_to_m4a(source_path, output_path):
-    command = [
-        _ffmpeg_executable(),
-        "-y",
-        "-i",
-        str(source_path),
-        "-vn",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "64k",
-        "-movflags",
-        "+faststart",
-        str(output_path),
-    ]
-    subprocess.run(
-        command,
-        check=True,
-        capture_output=True,
-        timeout=30,
-    )
+@chat_bp.get("/uploads/profile/<path:filename>")
+@login_required
+def profile_upload(filename):
+    if filename != secure_filename(filename) or not User.query.filter_by(profile_image=filename).first():
+        abort(404)
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename, conditional=True)
 
 
-def _ffmpeg_executable():
-    configured = os.environ.get("FFMPEG_BINARY")
-    if configured:
-        return configured
-
-    system_ffmpeg = shutil.which("ffmpeg")
-    if system_ffmpeg:
-        return system_ffmpeg
-
-    import imageio_ffmpeg
-
-    return imageio_ffmpeg.get_ffmpeg_exe()
+@chat_bp.get("/api/private-voice/<int:message_id>")
+@login_required
+def private_voice(message_id):
+    inbox = get_private_inbox(current_user.username)
+    allowed_users = {item["username"] for item in inbox["private"] + inbox["requests"]}
+    for other in allowed_users:
+        messages = get_private_messages(current_user.username, other, include_pending=True)
+        message = next((item for item in messages if int(item.get("id", 0)) == message_id), None)
+        if message and message.get("audio"):
+            filename = secure_filename(message["audio"].get("filename", ""))
+            if filename:
+                response = send_from_directory(Path(current_app.config["UPLOAD_FOLDER"]) / "voice", filename, conditional=True)
+                response.headers["Content-Disposition"] = "inline"
+                response.headers["X-Content-Type-Options"] = "nosniff"
+                return response
+    current_app.logger.warning("private_upload_denied user=%s message=%s", log_value(current_user.id), message_id)
+    abort(404)
 
 
 @chat_bp.get("/users")
@@ -336,6 +313,8 @@ def private_messages_api(username):
 @chat_bp.post("/api/dm/<username>/send")
 @login_required
 def send_private_api(username):
+    if not rate_limit("private_message", client_key(str(current_user.id)), 30, 60):
+        return jsonify({"error": "Too many messages. Please slow down."}), 429
     other_user = User.query.filter_by(username=username).first_or_404()
     if other_user.id == current_user.id:
         return abort(404)
@@ -357,7 +336,7 @@ def send_private_api(username):
 
     if not body and not audio:
         return jsonify({"error": "Message cannot be empty."}), 400
-    if len(body) > 2000:
+    if len(body) > current_app.config["MAX_MESSAGE_LENGTH"]:
         return jsonify({"error": "Message is too long."}), 400
 
     message = save_private_message(
@@ -485,12 +464,14 @@ def messages_stream_api():
 @chat_bp.post("/api/send")
 @login_required
 def send_api():
+    if not rate_limit("public_message", client_key(str(current_user.id)), 30, 60):
+        return jsonify({"error": "Too many messages. Please slow down."}), 429
     payload = request.get_json(silent=True) or request.form
     body = str(payload.get("message", "")).strip()
 
     if not body:
         return jsonify({"error": "Message cannot be empty."}), 400
-    if len(body) > 2000:
+    if len(body) > current_app.config["MAX_MESSAGE_LENGTH"]:
         return jsonify({"error": "Message is too long."}), 400
 
     message = save_message(current_user.username, body)

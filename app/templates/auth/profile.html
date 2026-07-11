@@ -15,7 +15,7 @@
     <div class="profile-grid">
       <div class="profile-preview">
         {% if current_user.profile_image %}
-          <img class="avatar avatar-large" src="{{ url_for('static', filename='uploads/' ~ current_user.profile_image) }}" alt="">
+          <img class="avatar avatar-large" src="{{ url_for('chat.profile_upload', filename=current_user.profile_image) }}" alt="">
         {% else %}
           <span class="avatar avatar-large">{{ current_user.username[:1]|upper }}</span>
         {% endif %}
@@ -26,6 +26,7 @@
 
       <div>
         <form class="form profile-form" method="post" action="{{ url_for('auth.profile') }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label for="display_name">Display name</label>
           <input id="display_name" name="display_name" maxlength="120" value="{{ current_user.display_name or '' }}" placeholder="{{ current_user.username }}">
 

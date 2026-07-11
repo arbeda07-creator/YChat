@@ -3,5 +3,13 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
+!.env.example
 instance/
+*.sqlite*
+*.db
+*.log
+app/static/uploads/
+tests/test-uploads/
+tests/test-*.json
 .pytest_cache/

@@ -19,13 +19,6 @@ class User(UserMixin, db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    messages = db.relationship(
-        "Message",
-        back_populates="author",
-        cascade="all, delete-orphan",
-        lazy=True,
-    )
-
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 

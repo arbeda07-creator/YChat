@@ -16,6 +16,7 @@
     </div>
 
     <form class="auth-card form" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="form-heading" dir="rtl">
         <h2>إنشاء حساب</h2>
         <p>اختر اسم مستخدم وكلمة مرور قوية</p>

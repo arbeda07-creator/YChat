@@ -1,3 +1,16 @@
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+const originalFetch = window.fetch.bind(window);
+window.fetch = (resource, options = {}) => {
+  const method = (options.method || "GET").toUpperCase();
+  const url = new URL(resource instanceof Request ? resource.url : resource, window.location.href);
+  if (url.origin === window.location.origin && !["GET", "HEAD", "OPTIONS"].includes(method)) {
+    const headers = new Headers(options.headers || (resource instanceof Request ? resource.headers : undefined));
+    headers.set("X-CSRF-Token", csrfToken);
+    options = { ...options, headers };
+  }
+  return originalFetch(resource, options);
+};
+
 const directShell = document.querySelector(".direct-shell");
 const summarySource = directShell || document.querySelector("[data-bottom-nav-summary-url]");
 const privateBadges = document.querySelectorAll("[data-private-badge]");

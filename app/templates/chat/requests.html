@@ -13,7 +13,7 @@
       <a class="profile-chip" href="{{ url_for('auth.profile') }}">
         <span dir="rtl">{{ current_user.display_label }}</span>
         {% if current_user.profile_image %}
-          <img class="nav-avatar" src="{{ url_for('static', filename='uploads/' ~ current_user.profile_image) }}" alt="">
+          <img class="nav-avatar" src="{{ url_for('chat.profile_upload', filename=current_user.profile_image) }}" alt="">
         {% else %}
           <span class="nav-avatar nav-avatar-fallback">{{ current_user.display_label[:1]|upper }}</span>
         {% endif %}

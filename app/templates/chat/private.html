@@ -9,7 +9,7 @@
       <a class="icon-button back-button" href="{{ url_for('chat.index') }}" aria-label="Back">&lsaquo;</a>
       <div class="chat-title-row">
         {% if other_user.profile_image %}
-          <img class="avatar" src="{{ url_for('static', filename='uploads/' ~ other_user.profile_image) }}" alt="">
+          <img class="avatar" src="{{ url_for('chat.profile_upload', filename=other_user.profile_image) }}" alt="">
         {% else %}
           <span class="avatar">{{ other_user.display_label[:1]|upper }}</span>
         {% endif %}

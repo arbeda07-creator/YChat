@@ -16,6 +16,8 @@ services:
         fromDatabase:
           name: ychat-2-db
           property: connectionString
+      - key: REDIS_URL
+        sync: false
 
 databases:
   - name: ychat-2-db
