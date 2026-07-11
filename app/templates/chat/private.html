@@ -4,6 +4,19 @@
 {% block body_class %}chat-page{% endblock %}
 
 {% block content %}
+  <section class="desktop-workspace chat-workspace">
+    {% include "chat/_desktop_rail.html" %}
+    <aside class="desktop-conversations" data-summary-url="{{ url_for('chat.private_summary_api') }}">
+      <header><strong>كل المحادثات</strong><a href="{{ url_for('chat.user_search') }}" aria-label="New chat">✎</a></header>
+      <div class="desktop-search">⌕ <span>بحث...</span></div>
+      <div class="conversation-list" data-private-list>
+        <a class="conversation-item active" href="{{ url_for('chat.private_chat', username=other_user.username) }}">
+          {% if other_user.profile_image %}<img class="avatar" src="{{ url_for('chat.profile_upload', filename=other_user.profile_image) }}" alt="">
+          {% else %}<span class="avatar">{{ other_user.display_label[:1]|upper }}</span>{% endif %}
+          <span class="conversation-copy"><strong>{{ other_user.display_label }}</strong><small>محادثة خاصة</small></span>
+        </a>
+      </div>
+    </aside>
   <section class="chat-layout">
     <div class="chat-header">
       <a class="icon-button back-button" href="{{ url_for('chat.index') }}" aria-label="Back">&lsaquo;</a>
@@ -30,6 +43,7 @@
       >
         &vellip;
       </button>
+      <div class="chat-header-actions" aria-hidden="true"><span>⌕</span><span>♧</span><span>ⓘ</span></div>
       <span class="connection-status" id="connection-status" role="status" hidden>
         <span class="status-dot"></span>
         Live
@@ -72,9 +86,10 @@
       </button>
       <label class="sr-only" for="body">Message</label>
       <textarea id="body" name="body" rows="1" maxlength="2000" placeholder="Write a private message..."></textarea>
-      <button class="button button-primary send-button" type="submit" aria-label="Send">&rarr;</button>
+      <button class="button button-primary send-button" type="submit" aria-label="Send">➤</button>
       <p class="composer-error" id="composer-error" role="alert"></p>
     </form>
+  </section>
   </section>
 {% endblock %}
 

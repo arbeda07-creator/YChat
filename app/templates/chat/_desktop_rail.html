@@ -1,0 +1,15 @@
+<aside class="desktop-rail" aria-label="Desktop navigation">
+  <a class="rail-brand" href="{{ url_for('chat.index') }}"><span>Y</span><strong>YChat <small>2.0</small></strong></a>
+  <nav class="rail-nav">
+    <a class="active" href="{{ url_for('chat.index') }}">💬 <span>المحادثات</span><b data-private-badge>{{ inbox.private_unread_count if inbox is defined else 0 }}</b></a>
+    <a href="{{ url_for('chat.message_requests') }}">◉ <span>الإشعارات</span><b data-request-badge>{{ inbox.request_count if inbox is defined else 0 }}</b></a>
+    <a href="{{ url_for('chat.user_search') }}">♙ <span>جهات المراسلة</span></a>
+    <a href="{{ url_for('auth.profile') }}">☆ <span>المفضلة</span></a>
+    <a href="{{ url_for('auth.profile') }}">⚙ <span>الإعدادات</span></a>
+  </nav>
+  <a class="rail-user" href="{{ url_for('auth.profile') }}">
+    {% if current_user.profile_image %}<img src="{{ url_for('chat.profile_upload', filename=current_user.profile_image) }}" alt="">
+    {% else %}<span class="avatar">{{ current_user.display_label[:1]|upper }}</span>{% endif %}
+    <span><strong>{{ current_user.display_label }}</strong><small>متصل</small></span><b>•••</b>
+  </a>
+</aside>

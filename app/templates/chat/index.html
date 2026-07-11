@@ -3,6 +3,8 @@
 {% block title %}Direct - YChat 2.0{% endblock %}
 
 {% block content %}
+  <section class="desktop-workspace inbox-workspace">
+    {% include "chat/_desktop_rail.html" %}
   <section class="direct-shell" data-summary-url="{{ url_for('chat.private_summary_api') }}">
     <header class="direct-header">
       <button class="icon-button" type="button" aria-label="Menu">☰</button>
@@ -92,5 +94,9 @@
         {% endif %}
       </div>
     </div>
+  </section>
+  <section class="desktop-empty-chat" aria-hidden="true">
+    <span class="empty-orb">Y</span><h2>اختر محادثة</h2><p>افتح محادثة من القائمة لبدء التواصل</p>
+  </section>
   </section>
 {% endblock %}

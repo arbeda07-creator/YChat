@@ -12,4 +12,5 @@ instance/
 app/static/uploads/
 tests/test-uploads/
 tests/test-*.json
+ui-screenshots/
 .pytest_cache/
