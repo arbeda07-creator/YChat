@@ -121,6 +121,17 @@ def _ensure_user_profile_columns():
         "display_name": "VARCHAR(120)",
         "bio": "VARCHAR(280)",
         "profile_image": "VARCHAR(255)",
+        "show_online_status": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "show_last_seen": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "message_permission": "VARCHAR(20) NOT NULL DEFAULT 'everyone'",
+        "notification_messages": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "notification_requests": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "notification_sound": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "vibration_enabled": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "theme_mode": "VARCHAR(12) NOT NULL DEFAULT 'dark'",
+        "accent_theme": "VARCHAR(12) NOT NULL DEFAULT 'purple'",
+        "font_size": "VARCHAR(12) NOT NULL DEFAULT 'medium'",
+        "auto_download_media": "BOOLEAN NOT NULL DEFAULT TRUE",
     }
 
     table_name = '"user"' if db.engine.dialect.name != "sqlite" else "user"

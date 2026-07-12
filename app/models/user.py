@@ -13,6 +13,17 @@ class User(UserMixin, db.Model):
     display_name = db.Column(db.String(120), nullable=True)
     bio = db.Column(db.String(280), nullable=True)
     profile_image = db.Column(db.String(255), nullable=True)
+    show_online_status = db.Column(db.Boolean, nullable=False, default=True)
+    show_last_seen = db.Column(db.Boolean, nullable=False, default=True)
+    message_permission = db.Column(db.String(20), nullable=False, default="everyone")
+    notification_messages = db.Column(db.Boolean, nullable=False, default=True)
+    notification_requests = db.Column(db.Boolean, nullable=False, default=True)
+    notification_sound = db.Column(db.Boolean, nullable=False, default=True)
+    vibration_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    theme_mode = db.Column(db.String(12), nullable=False, default="dark")
+    accent_theme = db.Column(db.String(12), nullable=False, default="purple")
+    font_size = db.Column(db.String(12), nullable=False, default="medium")
+    auto_download_media = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(
         db.DateTime,
         nullable=False,

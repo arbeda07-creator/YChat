@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}تعديل البروفايل - YChat 2.0{% endblock %}
+{% block body_class %}account-page theme-{{ current_user.theme_mode }} accent-{{ current_user.accent_theme }} font-{{ current_user.font_size }}{% endblock %}
+{% block content %}
+<section class="account-shell edit-shell" dir="rtl">
+  <header class="account-header"><a class="icon-link" href="{{ url_for('auth.profile') }}" aria-label="رجوع">←</a><h1>تعديل البروفايل</h1><span></span></header>
+  <form class="settings-card edit-profile-form" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="profile-avatar-wrap edit-avatar">
+      {% if current_user.profile_image %}<img id="profile-preview" class="profile-avatar" src="{{ url_for('chat.profile_upload', filename=current_user.profile_image) }}" alt="معاينة الصورة">
+      {% else %}<span id="profile-fallback" class="profile-avatar profile-avatar-fallback">{{ current_user.display_label[:1]|upper }}</span><img id="profile-preview" class="profile-avatar is-hidden" alt="معاينة الصورة">{% endif %}
+      <label class="camera-button" for="profile_image" aria-label="تغيير الصورة">▣</label>
+      <input class="sr-only" id="profile_image" name="profile_image" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+    </div>
+    <small class="upload-hint">اضغط على رمز الكاميرا لتغيير الصورة — الحد الأقصى 8 MB</small>
+    <label for="display_name">الاسم المعروض</label>
+    <input id="display_name" name="display_name" maxlength="120" value="{{ current_user.display_name or '' }}" placeholder="{{ current_user.username }}">
+    <label for="username">اسم المستخدم</label><input id="username" value="@{{ current_user.username }}" disabled dir="ltr">
+    <label for="bio">النبذة</label><textarea id="bio" name="bio" rows="4" maxlength="280">{{ current_user.bio or '' }}</textarea>
+    <div class="form-actions"><button class="button button-primary" type="submit">حفظ التغييرات</button><a class="button button-outline" href="{{ url_for('auth.profile') }}">إلغاء</a></div>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/profile-settings.js', v='1') }}" defer></script>{% endblock %}

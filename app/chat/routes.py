@@ -318,6 +318,11 @@ def send_private_api(username):
     other_user = User.query.filter_by(username=username).first_or_404()
     if other_user.id == current_user.id:
         return abort(404)
+    permission = other_user.message_permission or "everyone"
+    if permission == "none":
+        return jsonify({"error": "This user is not accepting messages."}), 403
+    if permission == "friends" and get_conversation_status(current_user.username, other_user.username) != "accepted":
+        return jsonify({"error": "This user accepts messages from existing contacts only."}), 403
 
     if request.content_type and request.content_type.startswith("multipart/form-data"):
         payload = request.form

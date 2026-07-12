@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <title>{% block title %}YChat 2.0{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css', v='glass.1') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css', v='account.2') }}">
   </head>
   <body class="{% block body_class %}{% endblock %}{% if current_user.is_authenticated %} has-bottom-nav{% endif %}">
     <div class="app-shell">
@@ -96,7 +96,7 @@
             <span dir="rtl">&#1575;&#1604;&#1573;&#1588;&#1593;&#1575;&#1585;&#1575;&#1578;</span>
           </a>
 
-          <a class="bottom-nav-item{% if request.endpoint == 'auth.profile' %} active{% endif %}" href="{{ url_for('auth.profile') }}" aria-label="Profile">
+          <a class="bottom-nav-item{% if request.endpoint in ['auth.profile', 'auth.edit_profile', 'auth.settings'] %} active{% endif %}" href="{{ url_for('auth.profile') }}" aria-label="Profile">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M20 21a8 8 0 0 0-16 0"></path>
               <circle cx="12" cy="7" r="4"></circle>

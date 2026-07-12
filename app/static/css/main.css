@@ -1611,3 +1611,35 @@ body.has-bottom-nav main { padding: 0 0 92px; }
   .messages { padding-inline:12px; }
   .message { max-width:88%; }
 }
+
+/* Profile and settings */
+.account-page { --account-bg:#050817; --account-card:#0e1429; --account-card-2:#111a32; --account-text:#f6f4ff; --account-muted:#9ca5bd; background:radial-gradient(circle at 50% 5%,rgba(115,49,239,.18),transparent 30%),var(--account-bg); color:var(--account-text); min-height:100dvh; }
+.account-page .topbar { display:none; }
+.account-page .app-shell { max-width:1220px; }
+.account-page main { padding-bottom:100px; }
+.account-shell,.settings-shell { margin:0 auto; max-width:980px; }
+.account-header { align-items:center; display:grid; grid-template-columns:44px 1fr 44px; min-height:72px; text-align:center; }
+.account-header h1 { font-size:1.45rem; }
+.icon-link { align-items:center; border:1px solid #2e3651; border-radius:12px; color:var(--account-text); display:flex; height:42px; justify-content:center; }
+.profile-view-card,.settings-card,.danger-zone { background:linear-gradient(145deg,rgba(18,25,49,.96),rgba(9,15,34,.96)); border:1px solid #293250; border-radius:22px; box-shadow:0 24px 70px rgba(0,0,0,.28); }
+.profile-view-card { align-items:center; display:flex; flex-direction:column; gap:14px; padding:34px; }
+.profile-avatar-wrap { height:140px; position:relative; width:140px; }
+.profile-avatar { border:3px solid #9b55ff; border-radius:50%; box-shadow:0 0 10px #8d48ff,0 0 32px rgba(132,61,255,.65); display:flex; height:100%; object-fit:cover; width:100%; }
+.profile-avatar-fallback { align-items:center; background:#161f3c; color:#fff; font-size:3rem; justify-content:center; }
+.online-dot { background:#19d56b; border:3px solid #11182d; border-radius:50%; bottom:8px; height:24px; position:absolute; right:8px; width:24px; }
+.profile-identity { text-align:center; }.profile-identity h2 { font-size:1.65rem; }.profile-identity p,.profile-bio,.upload-hint { color:var(--account-muted); }
+.profile-bio { background:#11182d; border:1px solid #222c49; border-radius:12px; max-width:580px; padding:14px 20px; text-align:center; width:100%; }
+.profile-stats { display:grid; gap:10px; grid-template-columns:repeat(3,1fr); max-width:680px; width:100%; }
+.profile-stats div { background:#11182d; border:1px solid #293250; border-radius:14px; display:grid; gap:4px; padding:16px; text-align:center; }.profile-stats strong { font-size:1.15rem; }.profile-stats span { color:var(--account-muted); font-size:.82rem; }
+.profile-actions,.form-actions { display:grid; gap:10px; grid-template-columns:1fr 1fr; max-width:680px; width:100%; }
+.button-outline { background:transparent; border:1px solid #36405e; color:var(--account-text); }
+.edit-shell { max-width:620px; }.edit-profile-form { display:grid; gap:12px; padding:26px; }.edit-avatar { margin:0 auto; }.camera-button { align-items:center; background:linear-gradient(135deg,var(--primary),var(--primary-2)); border:2px solid #151b31; border-radius:12px; bottom:-3px; color:white; cursor:pointer; display:flex; height:42px; justify-content:center; position:absolute; right:3px; width:42px; }.upload-hint { text-align:center; }
+.account-page input,.account-page textarea,.account-page select { background:#0b1124; border-color:#303957; color:var(--account-text); }.account-page input:disabled { color:#778099; }.is-hidden { display:none!important; }
+.settings-grid { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }.settings-card { padding:18px; }.settings-card h2,.danger-zone h2 { font-size:1.05rem; margin-bottom:12px; }
+.setting-row { align-items:center; background:#11182d; border:1px solid #28314d; border-radius:11px; color:var(--account-text); display:flex; font-weight:500; justify-content:space-between; margin-top:7px; min-height:48px; padding:9px 13px; width:100%; }.setting-row select { border:0; min-height:34px; padding:4px 8px; width:auto; }.setting-row small { color:var(--account-muted); }
+.switch input { height:1px; opacity:0; position:absolute; width:1px; }.switch i { background:#313a55; border-radius:20px; display:block; height:24px; position:relative; transition:.2s; width:43px; }.switch i::after { background:white; border-radius:50%; content:""; height:18px; left:3px; position:absolute; top:3px; transition:.2s; width:18px; }.switch input:checked+i { background:linear-gradient(135deg,var(--primary),var(--primary-2)); }.switch input:checked+i::after { transform:translateX(19px); }
+.settings-save { grid-column:1/-1; }.settings-save .button { width:100%; }.danger-zone { border-color:#6a2031; margin-top:14px; padding:18px; }.danger-button { background:#5c1123; border:1px solid #8d2941; color:#ffb6c4; width:100%; }.danger-text { color:#ff5b76; }
+dialog { background:#10162b; border:1px solid #343e5e; border-radius:18px; color:white; max-width:420px; padding:24px; width:calc(100% - 28px); }dialog::backdrop { background:rgba(0,0,0,.7); }dialog p { color:#aab2c8; margin:12px 0 20px; }
+.accent-blue { --primary:#246bda; --primary-2:#4ea3ff; }.accent-green { --primary:#078f65; --primary-2:#25c88e; }.font-small { font-size:14px; }.font-large { font-size:18px; }
+.theme-light { --account-bg:#eef2f8; --account-card:#fff; --account-card-2:#f5f7fb; --account-text:#101426; --account-muted:#65708a; }.theme-light .profile-view-card,.theme-light .settings-card,.theme-light .danger-zone { background:#fff; border-color:#dce2ee; }.theme-light .profile-bio,.theme-light .profile-stats div,.theme-light .setting-row { background:#f5f7fb; border-color:#dce2ee; }.theme-light input,.theme-light textarea,.theme-light select { background:#fff; color:#101426; }
+@media(max-width:760px){.account-page .app-shell{padding:0 0 96px}.account-page main{padding-bottom:0}.account-shell,.settings-shell{width:100%}.account-header{padding:0 16px}.profile-view-card,.settings-card,.danger-zone{border-radius:15px}.profile-view-card{border-left:0;border-right:0;padding:24px 16px}.profile-avatar-wrap{height:118px;width:118px}.profile-stats{gap:6px}.profile-stats div{padding:12px 5px}.profile-actions{grid-template-columns:1fr}.settings-grid{grid-template-columns:1fr;padding:0 12px}.danger-zone{margin:12px}.edit-profile-form{margin:0 12px;padding:20px 16px}.account-page .bottom-nav{display:grid}.account-header h1{font-size:1.15rem}}

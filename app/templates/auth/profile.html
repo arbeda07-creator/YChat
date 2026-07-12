@@ -1,45 +1,26 @@
 {% extends "base.html" %}
-
-{% block title %}Profile - YChat 2.0{% endblock %}
-
+{% block title %}البروفايل - YChat 2.0{% endblock %}
+{% block body_class %}account-page theme-{{ current_user.theme_mode }} accent-{{ current_user.accent_theme }} font-{{ current_user.font_size }}{% endblock %}
 {% block content %}
-  <section class="profile-panel">
-    <header class="profile-heading">
-      <button class="icon-button" type="button" aria-label="Menu">☰</button>
-      <h1>YChat 2.0</h1>
-      <a class="profile-chip" href="{{ url_for('chat.index') }}">Direct</a>
-    </header>
-
-    <h2 class="panel-title" dir="rtl">الملف الشخصي</h2>
-
-    <div class="profile-grid">
-      <div class="profile-preview">
-        {% if current_user.profile_image %}
-          <img class="avatar avatar-large" src="{{ url_for('chat.profile_upload', filename=current_user.profile_image) }}" alt="">
-        {% else %}
-          <span class="avatar avatar-large">{{ current_user.username[:1]|upper }}</span>
-        {% endif %}
-        <strong>{{ current_user.display_label }}</strong>
-        <span>@{{ current_user.username }}</span>
-        <small>{{ current_user.bio or "متصل" }}</small>
-      </div>
-
-      <div>
-        <form class="form profile-form" method="post" action="{{ url_for('auth.profile') }}" enctype="multipart/form-data">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <label for="display_name">Display name</label>
-          <input id="display_name" name="display_name" maxlength="120" value="{{ current_user.display_name or '' }}" placeholder="{{ current_user.username }}">
-
-          <label for="bio">Bio / status</label>
-          <textarea id="bio" name="bio" rows="3" maxlength="280" placeholder="Write a short status...">{{ current_user.bio or '' }}</textarea>
-
-          <label for="profile_image">Profile picture</label>
-          <input id="profile_image" name="profile_image" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
-          <small class="field-hint">PNG, JPG, GIF or WebP — up to 8 MB</small>
-
-          <button class="button button-primary" type="submit">Save changes</button>
-        </form>
-      </div>
+<section class="account-shell" dir="rtl">
+  <header class="account-header"><h1>البروفايل</h1><a class="icon-link" href="{{ url_for('auth.settings') }}" aria-label="الإعدادات">⚙</a></header>
+  <article class="profile-view-card">
+    <div class="profile-avatar-wrap">
+      {% if current_user.profile_image %}<img class="profile-avatar" src="{{ url_for('chat.profile_upload', filename=current_user.profile_image) }}" alt="صورة {{ current_user.display_label }}">
+      {% else %}<span class="profile-avatar profile-avatar-fallback">{{ current_user.display_label[:1]|upper }}</span>{% endif %}
+      {% if current_user.show_online_status %}<span class="online-dot" title="متصل"></span>{% endif %}
     </div>
-  </section>
+    <div class="profile-identity"><h2>{{ current_user.display_label }}</h2><p dir="ltr">@{{ current_user.username }}</p></div>
+    <p class="profile-bio">{{ current_user.bio or 'لا توجد نبذة بعد.' }}</p>
+    <div class="profile-stats">
+      <div><strong>{{ stats.conversations }}</strong><span>المحادثات</span></div>
+      <div><strong>{{ stats.friends }}</strong><span>الأصدقاء</span></div>
+      <div><strong>{{ current_user.created_at.strftime('%Y/%m/%d') }}</strong><span>تاريخ الانضمام</span></div>
+    </div>
+    <div class="profile-actions">
+      <a class="button button-primary" href="{{ url_for('auth.edit_profile') }}">✎ تعديل البروفايل</a>
+      <a class="button button-outline" href="{{ url_for('auth.settings') }}">⚙ الإعدادات</a>
+    </div>
+  </article>
+</section>
 {% endblock %}

@@ -91,7 +91,7 @@ class PrivateChatTestCase(unittest.TestCase):
     def test_mobile_sized_profile_image_can_be_uploaded(self):
         image_bytes = b"\x89PNG\r\n\x1a\n" + (b"\0" * (3 * 1024 * 1024))
         response = self.alice.post(
-            "/auth/profile",
+            "/auth/profile/edit",
             data={
                 "csrf_token": "test-csrf-token",
                 "profile_image": (io.BytesIO(image_bytes), "camera-photo.png"),
@@ -104,6 +104,43 @@ class PrivateChatTestCase(unittest.TestCase):
             user = db.session.get(User, self.alice_id)
             self.assertTrue(user.profile_image.endswith(".png"))
             self.assertTrue((self.upload_folder / user.profile_image).is_file())
+
+    def test_profile_is_view_only_and_edit_page_renders_on_mobile_route(self):
+        profile = self.alice.get("/auth/profile")
+        self.assertEqual(profile.status_code, 200)
+        self.assertNotIn(b'type="file"', profile.data)
+        self.assertIn(b"/auth/profile/edit", profile.data)
+        self.assertEqual(self.alice.get("/auth/profile/edit").status_code, 200)
+
+    def test_invalid_profile_image_is_rejected(self):
+        response = self.alice.post(
+            "/auth/profile/edit",
+            data={"csrf_token": "test-csrf-token", "profile_image": (io.BytesIO(b"not-an-image"), "photo.png")},
+            content_type="multipart/form-data",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_settings_are_saved_for_current_user_only(self):
+        response = self.alice.post(
+            "/auth/settings",
+            data={
+                "csrf_token": "test-csrf-token", "message_permission": "friends",
+                "theme_mode": "light", "accent_theme": "blue", "font_size": "large",
+                "show_last_seen": "on", "notification_messages": "on",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        with self.app.app_context():
+            alice = db.session.get(User, self.alice_id)
+            bob = db.session.get(User, self.bob_id)
+            self.assertEqual((alice.message_permission, alice.theme_mode, alice.accent_theme), ("friends", "light", "blue"))
+            self.assertEqual(bob.message_permission, "everyone")
+
+    def test_profile_and_settings_require_authentication(self):
+        anonymous = self.app.test_client()
+        self.assertEqual(anonymous.get("/auth/profile").status_code, 302)
+        self.assertEqual(anonymous.get("/auth/profile/edit").status_code, 302)
+        self.assertEqual(anonymous.get("/auth/settings").status_code, 302)
 
     def test_read_receipt_changes_after_recipient_opens_chat(self):
         self._accepted_message()
