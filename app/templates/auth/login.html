@@ -1,36 +1,35 @@
 {% extends "base.html" %}
-
-{% block title %}Login - YChat 2.0{% endblock %}
-{% block body_class %}auth-page{% endblock %}
-
+{% block title %}تسجيل الدخول - YChat 2.0{% endblock %}
+{% block body_class %}auth-page auth-neon-page{% endblock %}
 {% block content %}
-  <section class="auth-hero">
-    <div class="auth-welcome">
-      <div class="brand-mark">Y</div>
-      <h1>مرحبا بك في YChat</h1>
-      <p>تواصل مع أصدقائك بسهولة وأمان</p>
-      <div class="chat-illustration" aria-hidden="true">
-        <span></span>
-        <span></span>
+<section class="neon-auth-shell" dir="rtl">
+  <header class="neon-auth-header">
+    <a class="neon-logo-lockup" href="{{ url_for('chat.index') }}" aria-label="YChat 2.0">
+      <span class="neon-logo neon-logo-small"><img src="{{ url_for('static', filename='images/ychat-logo-v2.png', v='2') }}" alt="شعار YChat"></span>
+      <strong dir="ltr">YChat <em>2.0</em></strong>
+    </a>
+    <nav><a class="neon-nav-action active" href="{{ url_for('auth.login') }}">▣ تسجيل الدخول</a><a class="neon-nav-action" href="{{ url_for('public_auth.register') }}">✎ إنشاء حساب</a></nav>
+  </header>
+  <div class="neon-auth-layout">
+    <div class="neon-welcome" aria-label="مرحباً بك في YChat">
+      <i class="neon-orb orb-one"></i><i class="neon-orb orb-two"></i>
+      <div class="neon-welcome-bubble">
+        <img class="glass-bubble-asset" src="{{ url_for('static', filename='images/glass-bubble.png', v='1') }}" alt="">
+        <span class="neon-logo neon-logo-hero"><img src="{{ url_for('static', filename='images/ychat-logo-v2.png', v='2') }}" alt="شعار YChat"></span>
+        <h1>مرحباً بك في <span>YChat</span></h1><p>تواصل مع أصدقائك بسهولة وأمان</p>
       </div>
+      <div class="typing-bubble"><span></span><span></span><span></span></div>
+      <div class="typing-bubble typing-bubble-small"><span></span><span></span><span></span></div>
     </div>
-
-    <form class="auth-card form" method="post">
+    <form class="auth-card neon-auth-card form" method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="form-heading" dir="rtl">
-        <h2>تسجيل الدخول</h2>
-        <p>ادخل إلى حسابك لمتابعة المحادثات</p>
-      </div>
-
-      <label for="username">اسم المستخدم</label>
-      <input id="username" name="username" autocomplete="username" placeholder="اسم المستخدم" required>
-
-      <label for="password">كلمة المرور</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" placeholder="كلمة المرور" required>
-
-      <button class="button button-primary" type="submit">دخول</button>
-
+      <div class="auth-lock" aria-hidden="true">♙</div>
+      <div class="form-heading"><h2>تسجيل الدخول</h2><p>ادخل إلى حسابك لمتابعة المحادثات</p></div>
+      <label for="username">اسم المستخدم</label><div class="neon-input-wrap"><span>♙</span><input id="username" name="username" autocomplete="username" placeholder="اسم المستخدم" required></div>
+      <label for="password">كلمة المرور</label><div class="neon-input-wrap"><span>▣</span><input id="password" name="password" type="password" autocomplete="current-password" placeholder="كلمة المرور" required></div>
+      <button class="button button-primary" type="submit">دخول <b>←</b></button>
       <p class="muted centered">ليس لديك حساب؟ <a href="{{ url_for('public_auth.register') }}">إنشاء حساب</a></p>
     </form>
-  </section>
+  </div>
+</section>
 {% endblock %}

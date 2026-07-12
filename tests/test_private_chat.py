@@ -284,6 +284,19 @@ class PrivateChatTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "/")
 
+    def test_auth_pages_keep_required_fields_and_neon_responsive_shell(self):
+        anonymous = self.app.test_client()
+        login = anonymous.get("/auth/login")
+        register = anonymous.get("/register")
+        self.assertEqual(login.status_code, 200)
+        self.assertEqual(register.status_code, 200)
+        self.assertIn(b'class="neon-auth-shell"', login.data)
+        self.assertIn(b'name="username"', login.data)
+        self.assertIn(b'name="password"', login.data)
+        self.assertIn(b'name="csrf_token"', login.data)
+        self.assertIn(b'name="confirm_password"', register.data)
+        self.assertIn(b"images/ychat-logo-v2.png", login.data)
+
     def test_rate_limit_counter_is_atomic_across_concurrent_callers(self):
         key = "concurrent-shared-key"
         with self.app.app_context():

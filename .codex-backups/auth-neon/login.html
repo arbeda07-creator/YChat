@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Login - YChat 2.0{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+  <section class="auth-hero">
+    <div class="auth-welcome">
+      <div class="brand-mark">Y</div>
+      <h1>مرحبا بك في YChat</h1>
+      <p>تواصل مع أصدقائك بسهولة وأمان</p>
+      <div class="chat-illustration" aria-hidden="true">
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+
+    <form class="auth-card form" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-heading" dir="rtl">
+        <h2>تسجيل الدخول</h2>
+        <p>ادخل إلى حسابك لمتابعة المحادثات</p>
+      </div>
+
+      <label for="username">اسم المستخدم</label>
+      <input id="username" name="username" autocomplete="username" placeholder="اسم المستخدم" required>
+
+      <label for="password">كلمة المرور</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" placeholder="كلمة المرور" required>
+
+      <button class="button button-primary" type="submit">دخول</button>
+
+      <p class="muted centered">ليس لديك حساب؟ <a href="{{ url_for('public_auth.register') }}">إنشاء حساب</a></p>
+    </form>
+  </section>
+{% endblock %}
