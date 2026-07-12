@@ -10,6 +10,17 @@
     </a>
     <nav><a class="neon-nav-action active" href="{{ url_for('auth.login') }}">▣ تسجيل الدخول</a><a class="neon-nav-action" href="{{ url_for('public_auth.register') }}">✎ إنشاء حساب</a></nav>
   </header>
+  <aside class="desktop-auth-sidebar" aria-label="التنقل">
+    <nav>
+      <a class="active" href="{{ url_for('auth.login') }}">⌂ <span>الرئيسية</span></a>
+      <a href="{{ url_for('auth.login') }}">▢ <span>المحادثات</span></a>
+      <a href="{{ url_for('public_auth.register') }}">♧ <span>الأصدقاء</span></a>
+      <a href="{{ url_for('public_auth.register') }}">✉ <span>الطلبات</span></a>
+      <a href="{{ url_for('auth.login') }}">⚙ <span>الإعدادات</span></a>
+    </nav>
+    <div class="auth-theme-row"><span>☾ الوضع الداكن</span><i></i></div>
+    <div class="sidebar-brand-card"><span class="neon-logo"><img src="{{ url_for('static', filename='images/ychat-logo-v2.png', v='2') }}" alt=""></span><strong dir="ltr">YChat <em>2.0</em></strong><small>تواصل مع أصدقائك<br>بسهولة وأمان</small></div>
+  </aside>
   <div class="neon-auth-layout">
     <div class="neon-welcome" aria-label="مرحباً بك في YChat">
       <i class="neon-orb orb-one"></i><i class="neon-orb orb-two"></i>
