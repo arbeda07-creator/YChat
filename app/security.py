@@ -52,7 +52,7 @@ def init_security(app):
     app.config.setdefault("LOGIN_LOCKOUT_SECONDS", 300)
     app.config.setdefault("MAX_MESSAGE_LENGTH", 2000)
     app.config.setdefault("MAX_VOICE_BYTES", 2 * 1024 * 1024)
-    app.config.setdefault("MAX_PROFILE_IMAGE_BYTES", 2 * 1024 * 1024)
+    app.config.setdefault("MAX_PROFILE_IMAGE_BYTES", 8 * 1024 * 1024)
     app.jinja_env.globals["csrf_token"] = csrf_token
 
     @app.before_request

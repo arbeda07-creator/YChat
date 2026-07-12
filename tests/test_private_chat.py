@@ -35,7 +35,8 @@ class PrivateChatTestCase(unittest.TestCase):
             MESSAGES_FILE = str(self.messages_file)
             PRIVATE_MESSAGES_FILE = str(self.private_messages_file)
             UPLOAD_FOLDER = str(self.upload_folder)
-            MAX_CONTENT_LENGTH = 2 * 1024 * 1024
+            MAX_CONTENT_LENGTH = 9 * 1024 * 1024
+            MAX_PROFILE_IMAGE_BYTES = 8 * 1024 * 1024
             FORCE_HTTPS = False
             SESSION_COOKIE_SECURE = False
             RATELIMIT_STORAGE_URI = "memory://"
@@ -86,6 +87,23 @@ class PrivateChatTestCase(unittest.TestCase):
         message_id = response.get_json()["message"]["id"]
         self.assertEqual(self.bob.post("/api/dm/alice/accept").status_code, 200)
         return message_id
+
+    def test_mobile_sized_profile_image_can_be_uploaded(self):
+        image_bytes = b"\x89PNG\r\n\x1a\n" + (b"\0" * (3 * 1024 * 1024))
+        response = self.alice.post(
+            "/auth/profile",
+            data={
+                "csrf_token": "test-csrf-token",
+                "profile_image": (io.BytesIO(image_bytes), "camera-photo.png"),
+            },
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        with self.app.app_context():
+            user = db.session.get(User, self.alice_id)
+            self.assertTrue(user.profile_image.endswith(".png"))
+            self.assertTrue((self.upload_folder / user.profile_image).is_file())
 
     def test_read_receipt_changes_after_recipient_opens_chat(self):
         self._accepted_message()

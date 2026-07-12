@@ -28,7 +28,8 @@ class Config:
         str(BASE_DIR / "instance" / "private_messages.json"),
     )
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", str(BASE_DIR / "instance" / "uploads"))
-    MAX_CONTENT_LENGTH = 2 * 1024 * 1024
+    # Keep enough room for multipart form metadata around the uploaded file.
+    MAX_CONTENT_LENGTH = 9 * 1024 * 1024
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
@@ -38,7 +39,7 @@ class Config:
     SESSION_REFRESH_EACH_REQUEST = True
     MAX_MESSAGE_LENGTH = 2000
     MAX_VOICE_BYTES = 2 * 1024 * 1024
-    MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024
+    MAX_PROFILE_IMAGE_BYTES = 8 * 1024 * 1024
     LOGIN_FAILURE_LIMIT = 5
     LOGIN_LOCKOUT_SECONDS = 300
     TRUST_PROXY_HEADERS = False
