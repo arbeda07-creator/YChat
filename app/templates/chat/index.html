@@ -7,6 +7,12 @@
     {% include "chat/_desktop_rail.html" %}
   <section class="direct-shell" data-summary-url="{{ url_for('chat.private_summary_api') }}">
     <header class="direct-header">
+      <div class="mobile-chat-brand">
+        <span class="mobile-chat-logo"><img src="{{ url_for('static', filename='images/ychat-logo-v2.png', v='2') }}" alt="شعار YChat"></span>
+        <strong dir="ltr">YChat <em>2.0</em></strong>
+      </div>
+      <h2 class="mobile-chat-title" dir="rtl">كل المحادثات</h2>
+      <a class="mobile-chat-compose" href="{{ url_for('chat.user_search') }}" aria-label="محادثة جديدة">✎</a>
       <button class="icon-button" type="button" aria-label="Menu">☰</button>
       <div>
         <span class="eyebrow">YChat Direct</span>

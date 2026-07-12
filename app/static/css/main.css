@@ -1713,3 +1713,14 @@ dialog { background:#10162b; border:1px solid #343e5e; border-radius:18px; color
   .account-shell:not(.edit-shell) .account-header h1{grid-column:2;justify-self:center}
   .account-shell:not(.edit-shell) .account-header .icon-link{position:absolute;right:16px}
 }
+
+.mobile-chat-brand,.mobile-chat-title,.mobile-chat-compose{display:none}
+@media(max-width:760px){
+  .direct-header{align-items:center;background:linear-gradient(110deg,rgba(21,15,66,.94),rgba(6,9,35,.96));border-bottom:1px solid rgba(107,75,212,.36);direction:ltr;display:grid;grid-template-columns:1fr auto 1fr;min-height:82px;padding:9px 16px}
+  .direct-header>div:not(.mobile-chat-brand),.direct-header>.icon-button,.direct-header>.profile-chip{display:none}
+  .mobile-chat-brand{align-items:center;color:#fff;display:flex;gap:8px;justify-self:start}
+  .mobile-chat-logo{display:block;height:54px;width:54px}.mobile-chat-logo img{height:100%;object-fit:contain;width:100%}
+  .mobile-chat-brand strong{font-size:1rem;white-space:nowrap}.mobile-chat-brand em{color:#994bff;font-style:normal}
+  .mobile-chat-title{color:#fff;display:block;font-size:1.05rem;justify-self:center;margin:0;white-space:nowrap}
+  .mobile-chat-compose{align-items:center;background:linear-gradient(145deg,rgba(92,33,158,.62),rgba(11,15,59,.88));border:1px solid rgba(142,80,255,.74);border-radius:16px;box-shadow:inset 1px 1px 2px rgba(255,255,255,.2),inset -5px -5px 12px rgba(43,106,255,.12),0 0 8px rgba(110,43,255,.22);color:#fff;display:flex;font-size:1.35rem;height:48px;justify-content:center;justify-self:end;width:48px}
+}
