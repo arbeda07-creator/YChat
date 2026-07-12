@@ -1708,4 +1708,8 @@ dialog { background:#10162b; border:1px solid #343e5e; border-radius:18px; color
 }
 @media(max-width:767px){
   .desktop-auth-sidebar{display:none}.neon-auth-shell{display:block}.neon-auth-header{height:78px}.neon-auth-layout{padding-top:2px}.neon-welcome{min-height:380px}.neon-welcome-bubble{height:295px}.neon-auth-card{border-radius:28px 26px 31px 28px}
+  .neon-welcome-bubble h1,.neon-welcome-bubble p{transform:translateY(-18px)}
+  .account-shell:not(.edit-shell) .account-header{position:relative}
+  .account-shell:not(.edit-shell) .account-header h1{grid-column:2;justify-self:center}
+  .account-shell:not(.edit-shell) .account-header .icon-link{position:absolute;right:16px}
 }
