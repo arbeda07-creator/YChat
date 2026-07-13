@@ -433,36 +433,66 @@ function clearReply() {
   replyText.textContent = "";
 }
 
+function isMessageListNearBottom() {
+  return messagesElement.scrollHeight - messagesElement.scrollTop - messagesElement.clientHeight < 80;
+}
+
 function resizeComposerInput() {
-  bodyInput.style.height = "auto";
-  bodyInput.style.height = `${Math.min(bodyInput.scrollHeight, 96)}px`;
+  const wasNearBottom = isMessageListNearBottom();
+  const previousHeight = bodyInput.offsetHeight;
+
+  bodyInput.style.height = "0px";
+  const nextHeight = Math.min(bodyInput.scrollHeight, 96);
+  bodyInput.style.height = `${nextHeight}px`;
+
+  if (wasNearBottom && bodyInput.offsetHeight !== previousHeight) {
+    messagesElement.scrollTop = messagesElement.scrollHeight;
+  }
 }
 
 function setupMobileViewport() {
   if (!document.body.classList.contains("chat-page")) return;
 
-  let baselineHeight = window.visualViewport?.height || window.innerHeight;
+  document.documentElement.classList.add("chat-document");
+  const viewport = window.visualViewport;
+  let largestViewportHeight = viewport?.height || window.innerHeight;
+  let previousViewportHeight = largestViewportHeight;
+  let keyboardOpen = false;
+
   const updateViewport = () => {
-    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const viewportHeight = Math.round(viewport?.height || window.innerHeight);
     const inputFocused = document.activeElement === bodyInput;
-    const keyboardOpen = inputFocused && baselineHeight - viewportHeight > 120;
-    document.body.classList.toggle("keyboard-open", keyboardOpen);
-    if (keyboardOpen) {
-      document.documentElement.style.setProperty("--chat-viewport-height", `${viewportHeight}px`);
-    } else {
-      document.documentElement.style.removeProperty("--chat-viewport-height");
+    const heightLoss = largestViewportHeight - viewportHeight;
+    const nextKeyboardOpen = heightLoss > Math.max(100, largestViewportHeight * 0.18)
+      && (inputFocused || keyboardOpen);
+    const viewportChanged = viewportHeight !== previousViewportHeight;
+
+    document.documentElement.style.setProperty("--chat-viewport-height", `${viewportHeight}px`);
+    document.body.classList.toggle("keyboard-open", nextKeyboardOpen);
+
+    if (nextKeyboardOpen && (!keyboardOpen || viewportChanged)) {
+      window.requestAnimationFrame(() => {
+        messagesElement.scrollTop = messagesElement.scrollHeight;
+      });
+    }
+
+    keyboardOpen = nextKeyboardOpen;
+    previousViewportHeight = viewportHeight;
+    if (!keyboardOpen && !inputFocused) {
+      largestViewportHeight = viewportHeight;
     }
   };
 
-  window.visualViewport?.addEventListener("resize", updateViewport);
-  bodyInput.addEventListener("focus", () => window.setTimeout(updateViewport, 80));
-  bodyInput.addEventListener("blur", () => window.setTimeout(updateViewport, 80));
+  viewport?.addEventListener("resize", updateViewport);
+  viewport?.addEventListener("scroll", updateViewport);
+  window.addEventListener("resize", updateViewport);
+  bodyInput.addEventListener("focus", updateViewport);
+  bodyInput.addEventListener("blur", updateViewport);
   window.addEventListener("orientationchange", () => {
-    window.setTimeout(() => {
-      baselineHeight = window.visualViewport?.height || window.innerHeight;
-      updateViewport();
-    }, 250);
+    largestViewportHeight = viewport?.height || window.innerHeight;
+    updateViewport();
   });
+  updateViewport();
 }
 
 async function sendMessage({ voiceBlob } = {}) {
